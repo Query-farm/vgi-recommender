@@ -59,7 +59,10 @@ jobs:
         run: uv run mypy vgi_recommender/ recommender_worker.py
 
       - name: Docstring lint (pydoclint)
-        run: uv run pydoclint vgi_recommender/ recommender_worker.py
+        # Run in an isolated env: vgi-rpc pulls canonical docstring-parser while
+        # pydoclint needs docstring-parser-fork (same top-level module), and the
+        # collision breaks `uv run pydoclint` in CI.
+        run: uvx pydoclint --config pyproject.toml vgi_recommender/ recommender_worker.py
 
   # Resolve the latest published haybarn release once, so the whole matrix tests
   # the same version (and we never hardcode/pin it).
