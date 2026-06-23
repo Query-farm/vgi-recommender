@@ -44,6 +44,7 @@ os.environ.setdefault("MKL_NUM_THREADS", "1")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 import warnings
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -65,6 +66,9 @@ __all__ = [
     "recommend_for",
     "similar_items",
 ]
+
+# A column block: column name -> list of cell values (str, float, or int).
+ColumnBlock = dict[str, list[Any]]
 
 # Default ALS hyperparameters. Iterations/regularization are fixed here (not
 # user-facing) for reproducible, well-converged small-matrix results.
@@ -97,8 +101,7 @@ def _require_columns(df: pd.DataFrame, required: dict[str, str]) -> None:
     if missing:
         detail = ", ".join(f"{role} := '{col}'" for role, col in missing.items())
         raise RecommenderError(
-            f"missing required column(s): {detail}; "
-            f"input relation has columns: {', '.join(map(str, df.columns))}"
+            f"missing required column(s): {detail}; input relation has columns: {', '.join(map(str, df.columns))}"
         )
 
 
@@ -127,8 +130,7 @@ class _Indexed:
             conf = pd.to_numeric(df[value], errors="coerce")
             if conf.isna().any():
                 raise RecommenderError(
-                    f"value column '{value}' must be numeric, but contains "
-                    f"non-numeric values (dtype {df[value].dtype})"
+                    f"value column '{value}' must be numeric, but contains non-numeric values (dtype {df[value].dtype})"
                 )
             conf = conf.astype(float).to_numpy()
         else:
@@ -230,7 +232,7 @@ def recommend_all(
     value: str | None = None,
     n: int = 10,
     factors: int = 50,
-) -> dict[str, list]:
+) -> ColumnBlock:
     """Top-N recommended items for every user (excluding already-seen items).
 
     Fits implicit-feedback ALS on the interaction matrix and, for each user,
@@ -278,7 +280,7 @@ def similar_items(
     value: str | None = None,
     n: int = 10,
     factors: int = 50,
-) -> dict[str, list]:
+) -> ColumnBlock:
     """Top-N most similar items for every item (cosine of ALS item factors).
 
     Args:
@@ -337,7 +339,7 @@ def recommend_for(
     target_user: str,
     n: int = 10,
     factors: int = 50,
-) -> dict[str, list]:
+) -> ColumnBlock:
     """Top-N recommended items for ONE user (``target_user``), excluding seen.
 
     Args:

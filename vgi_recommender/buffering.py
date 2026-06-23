@@ -35,15 +35,19 @@ class DrainState(ArrowSerializableDataclass):
 def serialize_batch(batch: pa.RecordBatch) -> bytes:
     """Serialize one RecordBatch to a self-describing Arrow IPC stream."""
     sink = pa.BufferOutputStream()
-    with pa.ipc.new_stream(sink, batch.schema) as writer:
+    # pyarrow's stubs leave new_stream untyped; the call is sound.
+    with pa.ipc.new_stream(sink, batch.schema) as writer:  # type: ignore[no-untyped-call]
         writer.write_batch(batch)
-    return sink.getvalue().to_pybytes()
+    result: bytes = sink.getvalue().to_pybytes()
+    return result
 
 
 def deserialize_batches(value: bytes) -> list[pa.RecordBatch]:
     """Inverse of :func:`serialize_batch` for one stored blob."""
-    reader = pa.ipc.open_stream(pa.BufferReader(value))
-    return reader.read_all().to_batches()
+    # pyarrow's stubs leave open_stream untyped; the call is sound.
+    reader = pa.ipc.open_stream(pa.BufferReader(value))  # type: ignore[no-untyped-call]
+    batches: list[pa.RecordBatch] = reader.read_all().to_batches()
+    return batches
 
 
 def input_schema_of(params: Any) -> pa.Schema:
@@ -63,12 +67,30 @@ class SinkBuffer[TArgs, TState](TableBufferingFunction[TArgs, TState]):
 
     @classmethod
     def process(cls, batch: pa.RecordBatch, params: TableBufferingParams[TArgs]) -> bytes:
+        """Sink one input batch under the single buffering key.
+
+        Args:
+            batch: One input record batch.
+            params: The buffering params (storage + execution id).
+
+        Returns:
+            The execution id, used as this stream's combine key.
+        """
         if batch.num_rows:
             params.storage.state_append(_DATA_KEY, b"", serialize_batch(batch))
         return params.execution_id
 
     @classmethod
     def combine(cls, state_ids: list[bytes], params: TableBufferingParams[TArgs]) -> list[bytes]:
+        """Collapse every sink state into the single finalize bucket.
+
+        Args:
+            state_ids: The per-process state ids to combine.
+            params: The buffering params (carries the execution id).
+
+        Returns:
+            A one-element list with the single finalize key.
+        """
         return [params.execution_id]
 
     @classmethod

@@ -30,8 +30,9 @@ import pyarrow as pa
 from vgi.arguments import Arg, TableInput
 from vgi.invocation import BindResponse
 from vgi.metadata import FunctionExample
-from vgi.table_buffering_function import OutputCollector, TableBufferingParams
+from vgi.table_buffering_function import TableBufferingParams
 from vgi.table_function import BindParams
+from vgi_rpc.rpc import OutputCollector
 
 from . import recommender
 from .buffering import DrainState, SinkBuffer
@@ -75,36 +76,36 @@ _RECOMMEND_FOR_SCHEMA = pa.schema(
 
 @dataclass(slots=True, frozen=True)
 class RecommendAllArgs:
+    """Arguments for ``recommend_all`` (relation as ``Arg(0)``, roles/params named)."""
+
     data: Annotated[TableInput, Arg(0, doc="Relation of (user, item, value) interactions.")]
     user: Annotated[str, Arg("user", default="user", doc="User-id column.")]
     item: Annotated[str, Arg("item", default="item", doc="Item-id column.")]
-    value: Annotated[
-        str, Arg("value", default="value", doc="Interaction-strength column (defaults to 1.0 if absent).")
-    ]
+    value: Annotated[str, Arg("value", default="value", doc="Interaction-strength column (defaults to 1.0 if absent).")]
     n: Annotated[int, Arg("n", default=10, doc="Recommendations per user.", ge=1)]
     factors: Annotated[int, Arg("factors", default=50, doc="ALS latent-factor count.", ge=1)]
 
 
 @dataclass(slots=True, frozen=True)
 class SimilarItemsArgs:
+    """Arguments for ``similar_items`` (relation as ``Arg(0)``, roles/params named)."""
+
     data: Annotated[TableInput, Arg(0, doc="Relation of (user, item, value) interactions.")]
     user: Annotated[str, Arg("user", default="user", doc="User-id column.")]
     item: Annotated[str, Arg("item", default="item", doc="Item-id column.")]
-    value: Annotated[
-        str, Arg("value", default="value", doc="Interaction-strength column (defaults to 1.0 if absent).")
-    ]
+    value: Annotated[str, Arg("value", default="value", doc="Interaction-strength column (defaults to 1.0 if absent).")]
     n: Annotated[int, Arg("n", default=10, doc="Similar items per item.", ge=1)]
     factors: Annotated[int, Arg("factors", default=50, doc="ALS latent-factor count.", ge=1)]
 
 
 @dataclass(slots=True, frozen=True)
 class RecommendForArgs:
+    """Arguments for ``recommend_for`` (relation as ``Arg(0)``, roles/params named)."""
+
     data: Annotated[TableInput, Arg(0, doc="Relation of (user, item, value) interactions.")]
     user: Annotated[str, Arg("user", default="user", doc="User-id column.")]
     item: Annotated[str, Arg("item", default="item", doc="Item-id column.")]
-    value: Annotated[
-        str, Arg("value", default="value", doc="Interaction-strength column (defaults to 1.0 if absent).")
-    ]
+    value: Annotated[str, Arg("value", default="value", doc="Interaction-strength column (defaults to 1.0 if absent).")]
     target_user: Annotated[str, Arg("target_user", doc="Id of the single user to recommend for.")]
     n: Annotated[int, Arg("n", default=10, doc="Number of recommendations.", ge=1)]
     factors: Annotated[int, Arg("factors", default=50, doc="ALS latent-factor count.", ge=1)]
@@ -121,6 +122,8 @@ class RecommendAll(SinkBuffer[RecommendAllArgs, DrainState]):
     FunctionArguments: ClassVar[type] = RecommendAllArgs
 
     class Meta:
+        """VGI function metadata (name, description, categories, examples)."""
+
         name = "recommend_all"
         description = (
             "Collaborative-filtering: fit implicit-feedback ALS, emit top-N recommended items "
@@ -140,12 +143,14 @@ class RecommendAll(SinkBuffer[RecommendAllArgs, DrainState]):
 
     @classmethod
     def on_bind(cls, params: BindParams[RecommendAllArgs]) -> BindResponse:
+        """Declare the output schema for this function."""
         return BindResponse(output_schema=_RECOMMEND_ALL_SCHEMA)
 
     @classmethod
     def initial_finalize_state(
         cls, finalize_state_id: bytes, params: TableBufferingParams[RecommendAllArgs]
     ) -> DrainState:
+        """Start each finalize stream with an unfinished drain cursor."""
         return DrainState()
 
     @classmethod
@@ -156,15 +161,21 @@ class RecommendAll(SinkBuffer[RecommendAllArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
+        """Fit ALS on the buffered relation and emit the single result batch.
+
+        Args:
+            params: The buffering params (buffered input + parsed args).
+            finalize_state_id: The finalize stream key.
+            state: The drain cursor; ensures the result is emitted once.
+            out: Sink for the output batch / stream completion.
+        """
         if state.done:
             out.finish()
             return
         state.done = True
         a = params.args
         df = cls.buffered_frame(params)
-        result = recommender.recommend_all(
-            df, user=a.user, item=a.item, value=a.value, n=a.n, factors=a.factors
-        )
+        result = recommender.recommend_all(df, user=a.user, item=a.item, value=a.value, n=a.n, factors=a.factors)
         out.emit(pa.RecordBatch.from_pydict(result, schema=params.output_schema))
 
 
@@ -174,6 +185,8 @@ class SimilarItems(SinkBuffer[SimilarItemsArgs, DrainState]):
     FunctionArguments: ClassVar[type] = SimilarItemsArgs
 
     class Meta:
+        """VGI function metadata (name, description, categories, examples)."""
+
         name = "similar_items"
         description = (
             "Item-item collaborative filtering: top-N most similar items per item by cosine "
@@ -192,12 +205,14 @@ class SimilarItems(SinkBuffer[SimilarItemsArgs, DrainState]):
 
     @classmethod
     def on_bind(cls, params: BindParams[SimilarItemsArgs]) -> BindResponse:
+        """Declare the output schema for this function."""
         return BindResponse(output_schema=_SIMILAR_ITEMS_SCHEMA)
 
     @classmethod
     def initial_finalize_state(
         cls, finalize_state_id: bytes, params: TableBufferingParams[SimilarItemsArgs]
     ) -> DrainState:
+        """Start each finalize stream with an unfinished drain cursor."""
         return DrainState()
 
     @classmethod
@@ -208,15 +223,21 @@ class SimilarItems(SinkBuffer[SimilarItemsArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
+        """Fit ALS on the buffered relation and emit the single result batch.
+
+        Args:
+            params: The buffering params (buffered input + parsed args).
+            finalize_state_id: The finalize stream key.
+            state: The drain cursor; ensures the result is emitted once.
+            out: Sink for the output batch / stream completion.
+        """
         if state.done:
             out.finish()
             return
         state.done = True
         a = params.args
         df = cls.buffered_frame(params)
-        result = recommender.similar_items(
-            df, user=a.user, item=a.item, value=a.value, n=a.n, factors=a.factors
-        )
+        result = recommender.similar_items(df, user=a.user, item=a.item, value=a.value, n=a.n, factors=a.factors)
         out.emit(pa.RecordBatch.from_pydict(result, schema=params.output_schema))
 
 
@@ -226,6 +247,8 @@ class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
     FunctionArguments: ClassVar[type] = RecommendForArgs
 
     class Meta:
+        """VGI function metadata (name, description, categories, examples)."""
+
         name = "recommend_for"
         description = (
             "Top-N recommended items for ONE user (target_user, a named scalar arg), excluding "
@@ -245,12 +268,14 @@ class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
 
     @classmethod
     def on_bind(cls, params: BindParams[RecommendForArgs]) -> BindResponse:
+        """Declare the output schema for this function."""
         return BindResponse(output_schema=_RECOMMEND_FOR_SCHEMA)
 
     @classmethod
     def initial_finalize_state(
         cls, finalize_state_id: bytes, params: TableBufferingParams[RecommendForArgs]
     ) -> DrainState:
+        """Start each finalize stream with an unfinished drain cursor."""
         return DrainState()
 
     @classmethod
@@ -261,6 +286,14 @@ class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
+        """Fit ALS on the buffered relation and emit the single result batch.
+
+        Args:
+            params: The buffering params (buffered input + parsed args).
+            finalize_state_id: The finalize stream key.
+            state: The drain cursor; ensures the result is emitted once.
+            out: Sink for the output batch / stream completion.
+        """
         if state.done:
             out.finish()
             return
