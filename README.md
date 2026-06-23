@@ -4,7 +4,9 @@
 
 <p align="center"><em>A <a href="https://query.farm">Query.Farm</a> VGI worker for DuckDB.</em></p>
 
-# vgi-recommender
+# Collaborative-Filtering Recommendations (ALS) in DuckDB
+
+> **vgi-recommender** · a [Query.Farm](https://query.farm) VGI worker · powered by implicit
 
 A [VGI](https://query.farm) worker that brings **collaborative-filtering
 recommendations** to DuckDB/SQL: top-N recommendations per user, item-item
