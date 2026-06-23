@@ -1,0 +1,112 @@
+# name: test/sql/recommender.test
+# description: Collaborative-filtering recommendation table functions (ALS)
+# group: [vgi_recommender]
+
+require-env VGI_RECOMMENDER_WORKER
+
+statement ok
+LOAD vgi;
+
+statement ok
+ATTACH 'recommender' AS recommender (TYPE vgi, LOCATION '${VGI_RECOMMENDER_WORKER}');
+
+# Planted-signal interactions: users u1/u2 bought A,B,C; u3/u4 bought only A,B
+# (so they should get C recommended); u5 only touched the isolated item D.
+statement ok
+CREATE TEMP TABLE events AS
+SELECT * FROM (VALUES
+  ('u1', 'A', 1.0),
+  ('u1', 'B', 1.0),
+  ('u1', 'C', 1.0),
+  ('u2', 'A', 1.0),
+  ('u2', 'B', 1.0),
+  ('u2', 'C', 1.0),
+  ('u3', 'A', 1.0),
+  ('u3', 'B', 1.0),
+  ('u4', 'A', 1.0),
+  ('u4', 'B', 1.0),
+  ('u5', 'D', 1.0)
+) AS t(u, i, v);
+
+# recommend_all: C is recommended to u3 (the planted signal). With factors small
+# and seed fixed the result is deterministic.
+query I
+SELECT count(*)
+FROM recommender.recommend_all((SELECT u, i, v FROM events),
+       user := 'u', item := 'i', value := 'v', n := 3, factors := 8)
+WHERE user = 'u3' AND item = 'C';
+----
+1
+
+# recommend_all never recommends an item a user already interacted with: u3/u4
+# already have A and B, so no such (user, item) row may appear.
+query I
+SELECT count(*)
+FROM recommender.recommend_all((SELECT u, i, v FROM events),
+       user := 'u', item := 'i', value := 'v', n := 10, factors := 8)
+WHERE (user = 'u3' AND item IN ('A', 'B'))
+   OR (user = 'u4' AND item IN ('A', 'B'));
+----
+0
+
+# Per-user ranks start at 1 (best). For u3, rank 1 exists.
+query I
+SELECT min(rank)
+FROM recommender.recommend_all((SELECT u, i, v FROM events),
+       user := 'u', item := 'i', value := 'v', n := 3, factors := 8)
+WHERE user = 'u3';
+----
+1
+
+# similar_items: A's nearest neighbour (rank 1) is B (they share all users).
+query I
+SELECT similar_item
+FROM recommender.similar_items((SELECT u, i, v FROM events),
+       user := 'u', item := 'i', value := 'v', n := 1, factors := 8)
+WHERE item = 'A' AND rank = 1;
+----
+B
+
+# An item is never its own neighbour.
+query I
+SELECT count(*)
+FROM recommender.similar_items((SELECT u, i, v FROM events),
+       user := 'u', item := 'i', value := 'v', n := 3, factors := 8)
+WHERE item = similar_item;
+----
+0
+
+# recommend_for one user: u3 gets C, and not its already-seen A/B.
+query I
+SELECT count(*)
+FROM recommender.recommend_for((SELECT u, i, v FROM events),
+       user := 'u', item := 'i', value := 'v', target_user := 'u3', n := 3, factors := 8)
+WHERE item = 'C';
+----
+1
+
+query I
+SELECT count(*)
+FROM recommender.recommend_for((SELECT u, i, v FROM events),
+       user := 'u', item := 'i', value := 'v', target_user := 'u3', n := 3, factors := 8)
+WHERE item IN ('A', 'B');
+----
+0
+
+# Unknown target_user -> zero rows (never a crash).
+query I
+SELECT count(*)
+FROM recommender.recommend_for((SELECT u, i, v FROM events),
+       user := 'u', item := 'i', value := 'v', target_user := 'ghost', n := 3, factors := 8);
+----
+0
+
+# Missing column -> clear error, never a crash.
+statement error
+SELECT * FROM recommender.recommend_all((SELECT u, i, v FROM events),
+       user := 'nope', item := 'i', value := 'v', n := 3);
+----
+missing required column
+
+statement ok
+DETACH recommender;
