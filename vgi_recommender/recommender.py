@@ -176,9 +176,7 @@ class _Indexed:
         return set(self.matrix[idx].indices.tolist())
 
 
-def _collect_user_recs(
-    fitted: _Indexed, u_idx: int, n: int
-) -> list[tuple[str, float]]:
+def _collect_user_recs(fitted: _Indexed, u_idx: int, n: int) -> list[tuple[str, float]]:
     """Top-``n`` novel recommendations for one user as ``(item_id, score)``.
 
     Explicitly drops already-seen items and de-duplicates, since ``implicit``'s
