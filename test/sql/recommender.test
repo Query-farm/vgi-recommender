@@ -108,5 +108,52 @@ SELECT * FROM recommender.recommend_all((SELECT u, i, v FROM events),
 ----
 missing required column
 
+# ---------------------------------------------------------------------------
+# HTTP-continuation paging: synthesize a cohort whose recommend_all result is
+# LARGER than one producer batch (ROWS_PER_TICK = 64), so the finalize offset
+# cursor must page across the http continuation boundary. 50 users x 24 items,
+# each user missing 2 held-out items -> ~100 result rows. On the buggy
+# (position-less) finalize the http leg restarts from row 0 each resume and never
+# terminates (this test would hang); the offset cursor pages and terminates with
+# the same total under all three transports.
+statement ok
+CREATE TEMP TABLE big_events AS
+SELECT 'u' || lpad(u::VARCHAR, 3, '0') AS u,
+       'i' || lpad(i::VARCHAR, 3, '0') AS i,
+       1.0 AS v
+FROM generate_series(0, 49) AS gu(u),
+     generate_series(0, 23) AS gi(i)
+WHERE i NOT IN ((u * 2) % 24, (u * 2 + 1) % 24);
+
+# Exactly 50 users, each with 2 unseen items -> the full result has 100 rows,
+# which exceeds the 64-row producer batch and forces the http leg to page.
+query I
+SELECT count(*)
+FROM recommender.recommend_all((SELECT u, i, v FROM big_events),
+       user := 'u', item := 'i', value := 'v', n := 5, factors := 8);
+----
+100
+
+# Every user appears with the full set of ranks 1..2 (its two held-out items),
+# so the paged stream loses/duplicates nothing.
+query I
+SELECT count(DISTINCT user)
+FROM recommender.recommend_all((SELECT u, i, v FROM big_events),
+       user := 'u', item := 'i', value := 'v', n := 5, factors := 8);
+----
+50
+
+# Ordered head: the first user's recommendations start at rank 1 and are dense
+# (1, 2). An ordered head only returns correctly if paging preserves order.
+query TI
+SELECT user, rank
+FROM recommender.recommend_all((SELECT u, i, v FROM big_events),
+       user := 'u', item := 'i', value := 'v', n := 5, factors := 8)
+ORDER BY user, rank
+LIMIT 2;
+----
+u000	1
+u000	2
+
 statement ok
 DETACH recommender;

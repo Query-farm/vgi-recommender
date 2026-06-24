@@ -35,11 +35,19 @@ class _Collector:
         pass
 
 
+# Cap on finalize ticks when draining with state re-serialization. A correct
+# offset cursor drains in ceil(total / ROWS_PER_TICK) + 1 ticks; the old
+# position-less "emit all then finish" finalize restarts from row 0 on every
+# re-deserialized state and never terminates, so it overruns this guard.
+_MAX_TICKS = 10_000
+
+
 def run_buffering(
     func_cls: type,
     table: pa.Table,
     *,
     named: dict[str, Any] | None = None,
+    serialize_state: bool = False,
 ) -> pa.Table:
     """Drive a recommender buffering function over a whole input ``table``.
 
@@ -49,9 +57,18 @@ def run_buffering(
             table.
         named: Named args (column roles + hyperparameters), e.g.
             ``{"user": "u", "item": "i", "n": 3}``.
+        serialize_state: If true, wire-serialize and re-deserialize the finalize
+            state between every ``finalize`` tick (mimicking the HTTP
+            continuation token round-trip). A correct offset cursor survives this
+            and terminates; a position-less cursor restarts from row 0 and
+            overruns the ``_MAX_TICKS`` guard (raising ``RuntimeError``).
 
     Returns:
         The emitted result as a single Arrow table (the function's output).
+
+    Raises:
+        RuntimeError: If finalize does not terminate within ``_MAX_TICKS`` ticks
+            (i.e. the cursor does not survive state re-serialization).
     """
     input_schema = table.schema
     args = Arguments(
@@ -102,7 +119,18 @@ def run_buffering(
     for fid in finalize_ids:
         params = make_params()
         state = func_cls.initial_finalize_state(fid, params)
+        ticks = 0
         while not out.finished:
             func_cls.finalize(params, fid, state, out)
+            ticks += 1
+            if ticks > _MAX_TICKS:
+                raise RuntimeError(
+                    f"{func_cls.Meta.name}.finalize did not terminate within {_MAX_TICKS} ticks "
+                    "(finalize cursor does not survive state re-serialization)"
+                )
+            if serialize_state and not out.finished:
+                # Round-trip the finalize state through the wire exactly as the
+                # stateless HTTP continuation token does between ticks.
+                state = type(state).deserialize_from_bytes(state.serialize_to_bytes())
 
     return pa.Table.from_batches(out.batches, schema=bind_resp.output_schema)
