@@ -58,9 +58,38 @@ _SCHEMA_DESCRIPTION_MD = (
     "over a (user, item, value) interaction relation."
 )
 
+_SCHEMA_KEYWORDS = (
+    "recommender, recommendations, collaborative filtering, ALS, implicit feedback, "
+    "recommend_all, similar_items, recommend_for, similar items, personalization, "
+    "matrix factorization, top-N"
+)
+
+# A small inline planted-signal interaction relation (no pre-existing table needed)
+# for the schema's representative example queries (VGI506). u1/u2 saw {A,B,C};
+# u3/u4 saw only {A,B}, so C is recommended to u3/u4 and A/B are neighbours.
+_EVENTS_VALUES = (
+    "(SELECT * FROM (VALUES "
+    "('u1','A',1.0),('u1','B',1.0),('u1','C',1.0),"
+    "('u2','A',1.0),('u2','B',1.0),('u2','C',1.0),"
+    "('u3','A',1.0),('u3','B',1.0),"
+    "('u4','A',1.0),('u4','B',1.0)"
+    ") AS events(u, i, v))"
+)
+
+_SCHEMA_EXAMPLE_QUERIES = (
+    f"SELECT * FROM recommender.main.recommend_all({_EVENTS_VALUES}, "
+    "user := 'u', item := 'i', value := 'v', n := 3) ORDER BY user, rank;\n"
+    f"SELECT * FROM recommender.main.similar_items({_EVENTS_VALUES}, "
+    "user := 'u', item := 'i', value := 'v', n := 2) ORDER BY item, rank;\n"
+    f"SELECT * FROM recommender.main.recommend_for({_EVENTS_VALUES}, "
+    "user := 'u', item := 'i', value := 'v', target_user := 'u3', n := 2) ORDER BY rank;"
+)
+
 _CATALOG_TAGS = {
-    "vgi.description_llm": _CATALOG_DESCRIPTION_LLM,
-    "vgi.description_md": _CATALOG_DESCRIPTION_MD,
+    "vgi.title": "Collaborative-Filtering Recommendations",
+    "vgi.keywords": _SCHEMA_KEYWORDS,
+    "vgi.doc_llm": _CATALOG_DESCRIPTION_LLM,
+    "vgi.doc_md": _CATALOG_DESCRIPTION_MD,
     "vgi.author": "Query.Farm",
     "vgi.copyright": "Copyright 2026 Query Farm LLC - https://query.farm",
     "vgi.license": "MIT",
@@ -69,8 +98,16 @@ _CATALOG_TAGS = {
 }
 
 _SCHEMA_TAGS = {
-    "vgi.description_llm": _SCHEMA_DESCRIPTION_LLM,
-    "vgi.description_md": _SCHEMA_DESCRIPTION_MD,
+    "vgi.title": "Recommender Functions (main)",
+    "vgi.keywords": _SCHEMA_KEYWORDS,
+    "vgi.doc_llm": _SCHEMA_DESCRIPTION_LLM,
+    "vgi.doc_md": _SCHEMA_DESCRIPTION_MD,
+    "vgi.source_url": "https://github.com/Query-farm/vgi-recommender/blob/main/vgi_recommender/worker.py",
+    "vgi.example_queries": _SCHEMA_EXAMPLE_QUERIES,
+    # VGI123 classifying tags use BARE keys (not vgi.-namespaced).
+    "domain": "machine-learning",
+    "category": "recommender-systems",
+    "topic": "collaborative-filtering",
 }
 
 _RECOMMENDER_CATALOG = Catalog(
