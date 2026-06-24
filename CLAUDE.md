@@ -51,11 +51,33 @@ ALS factorizes the **whole** user × item matrix at once, so every function is a
 - `process(batch)` — sink each input batch to execution-scoped `BoundStorage`.
 - `combine(state_ids)` — collapse to a single finalize key (one bucket).
 - `finalize(...)` — reassemble the full table (`buffered_frame()` → pandas),
-  fit the ALS model once, emit one result batch, then `out.finish()`.
+  fit the ALS model once into the cursor, then stream the result in bounded
+  `ROWS_PER_TICK` slices until drained, then `out.finish()`.
 
 `SinkBuffer` in `buffering.py` implements `process`/`combine`/`buffered_frame`;
-each function only writes `on_bind` (its output schema) + `finalize`. A
-`DrainState(done: bool)` cursor makes finalize emit exactly once.
+each function only writes `on_bind` (its output schema) + `finalize`.
+
+### Why finalize streams an offset cursor (HTTP continuation)
+
+`finalize` runs once per output batch. Over the **stateless http transport** the
+framework wire-serializes the finalize state (`ArrowSerializableDataclass`) after
+each tick, returns it to the client as a continuation token, and resumes by
+deserializing it — emitting at most **one producer batch per http response**.
+`recommend_all` (n × #users) and `similar_items` (n × #items) are unbounded and
+can exceed one batch.
+
+So `DrainState` is an **offset cursor**, not a done-flag: it carries the computed
+result as Arrow IPC bytes (`result_ipc`) plus the next-row `offset` (and a
+`started` flag). The first tick computes the whole result into the cursor; each
+tick emits the next `ROWS_PER_TICK` (= 64) slice and advances `offset`,
+finishing when `offset >= total`. Because `offset` survives the wire round-trip,
+a resumed http tick continues from where it left off instead of restarting from
+row 0. A position-less "emit everything then finish" finalize hangs forever over
+http once the result exceeds one batch — subprocess/unix hide it (live in-proc
+state); only http (and the `run_buffering(..., serialize_state=True)` unit
+harness, which re-serializes state between every tick) expose it. See
+`TestCursorSurvivesContinuation` in `tests/test_tables.py` and the
+`generate_series` paging case in `test/sql/recommender.test`.
 
 ## Sharp edges (learned the hard way)
 

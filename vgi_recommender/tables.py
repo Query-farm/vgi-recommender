@@ -35,8 +35,35 @@ from vgi.table_function import BindParams
 from vgi_rpc.rpc import OutputCollector
 
 from . import recommender
-from .buffering import DrainState, SinkBuffer
+from .buffering import ROWS_PER_TICK, DrainState, SinkBuffer, ipc_to_table, result_to_ipc
 from .schema_utils import field as sfield
+
+
+def _emit_next_slice(state: DrainState, out: OutputCollector, output_schema: pa.Schema) -> None:
+    """Emit one bounded slice of the cursor's result, advancing the offset.
+
+    Once ``state.started`` is set the full result lives in ``state.result_ipc``.
+    Each call emits at most :data:`ROWS_PER_TICK` rows starting at ``state.offset``
+    and advances ``offset``; when the cursor is drained it finishes the stream.
+    Because ``state`` is wire-serialized between finalize ticks, this resumes from
+    the persisted offset over the HTTP continuation boundary instead of restarting.
+
+    Args:
+        state: The finalize cursor (already computed; ``started`` is true).
+        out: Sink for the output batch / stream completion.
+        output_schema: The function's output schema (for the empty-result case).
+    """
+    table = ipc_to_table(state.result_ipc)
+    total = table.num_rows
+    if state.offset >= total:
+        out.finish()
+        return
+    end = min(state.offset + ROWS_PER_TICK, total)
+    chunk = table.slice(state.offset, end - state.offset).combine_chunks()
+    batches = chunk.to_batches()
+    out.emit(batches[0] if batches else pa.RecordBatch.from_pylist([], schema=output_schema))
+    state.offset = end
+
 
 # ---------------------------------------------------------------------------
 # Output schemas
@@ -150,7 +177,7 @@ class RecommendAll(SinkBuffer[RecommendAllArgs, DrainState]):
     def initial_finalize_state(
         cls, finalize_state_id: bytes, params: TableBufferingParams[RecommendAllArgs]
     ) -> DrainState:
-        """Start each finalize stream with an unfinished drain cursor."""
+        """Start each finalize stream with a fresh offset cursor (computed on first tick)."""
         return DrainState()
 
     @classmethod
@@ -161,22 +188,28 @@ class RecommendAll(SinkBuffer[RecommendAllArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
-        """Fit ALS on the buffered relation and emit the single result batch.
+        """Fit ALS once, then stream the result in bounded offset-cursor slices.
+
+        Top-N per user is unbounded (n x #users), so the result can exceed one
+        producer batch. The first tick computes it and stores it in the cursor;
+        each tick (resumed from the wire-serialized cursor over HTTP) emits the
+        next ``ROWS_PER_TICK`` slice and advances the offset until drained.
 
         Args:
             params: The buffering params (buffered input + parsed args).
             finalize_state_id: The finalize stream key.
-            state: The drain cursor; ensures the result is emitted once.
+            state: The offset cursor (computed once, then paged).
             out: Sink for the output batch / stream completion.
         """
-        if state.done:
-            out.finish()
-            return
-        state.done = True
-        a = params.args
-        df = cls.buffered_frame(params)
-        result = recommender.recommend_all(df, user=a.user, item=a.item, value=a.value, n=a.n, factors=a.factors)
-        out.emit(pa.RecordBatch.from_pydict(result, schema=params.output_schema))
+        if not state.started:
+            a = params.args
+            df = cls.buffered_frame(params)
+            result = recommender.recommend_all(df, user=a.user, item=a.item, value=a.value, n=a.n, factors=a.factors)
+            batch = pa.RecordBatch.from_pydict(result, schema=params.output_schema)
+            state.result_ipc = result_to_ipc(batch)
+            state.started = True
+            state.offset = 0
+        _emit_next_slice(state, out, params.output_schema)
 
 
 class SimilarItems(SinkBuffer[SimilarItemsArgs, DrainState]):
@@ -212,7 +245,7 @@ class SimilarItems(SinkBuffer[SimilarItemsArgs, DrainState]):
     def initial_finalize_state(
         cls, finalize_state_id: bytes, params: TableBufferingParams[SimilarItemsArgs]
     ) -> DrainState:
-        """Start each finalize stream with an unfinished drain cursor."""
+        """Start each finalize stream with a fresh offset cursor (computed on first tick)."""
         return DrainState()
 
     @classmethod
@@ -223,22 +256,28 @@ class SimilarItems(SinkBuffer[SimilarItemsArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
-        """Fit ALS on the buffered relation and emit the single result batch.
+        """Fit ALS once, then stream the result in bounded offset-cursor slices.
+
+        Top-N per item is unbounded (n x #items), so the result can exceed one
+        producer batch. The first tick computes it and stores it in the cursor;
+        each tick (resumed from the wire-serialized cursor over HTTP) emits the
+        next ``ROWS_PER_TICK`` slice and advances the offset until drained.
 
         Args:
             params: The buffering params (buffered input + parsed args).
             finalize_state_id: The finalize stream key.
-            state: The drain cursor; ensures the result is emitted once.
+            state: The offset cursor (computed once, then paged).
             out: Sink for the output batch / stream completion.
         """
-        if state.done:
-            out.finish()
-            return
-        state.done = True
-        a = params.args
-        df = cls.buffered_frame(params)
-        result = recommender.similar_items(df, user=a.user, item=a.item, value=a.value, n=a.n, factors=a.factors)
-        out.emit(pa.RecordBatch.from_pydict(result, schema=params.output_schema))
+        if not state.started:
+            a = params.args
+            df = cls.buffered_frame(params)
+            result = recommender.similar_items(df, user=a.user, item=a.item, value=a.value, n=a.n, factors=a.factors)
+            batch = pa.RecordBatch.from_pydict(result, schema=params.output_schema)
+            state.result_ipc = result_to_ipc(batch)
+            state.started = True
+            state.offset = 0
+        _emit_next_slice(state, out, params.output_schema)
 
 
 class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
@@ -275,7 +314,7 @@ class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
     def initial_finalize_state(
         cls, finalize_state_id: bytes, params: TableBufferingParams[RecommendForArgs]
     ) -> DrainState:
-        """Start each finalize stream with an unfinished drain cursor."""
+        """Start each finalize stream with a fresh offset cursor (computed on first tick)."""
         return DrainState()
 
     @classmethod
@@ -286,30 +325,36 @@ class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
         state: DrainState,
         out: OutputCollector,
     ) -> None:
-        """Fit ALS on the buffered relation and emit the single result batch.
+        """Fit ALS once, then stream the result in bounded offset-cursor slices.
+
+        This result is bounded (<= n), but it uses the same offset-cursor path as
+        the unbounded functions for uniformity: the first tick computes it into
+        the cursor, then each tick (resumed from the wire-serialized cursor over
+        HTTP) emits the next ``ROWS_PER_TICK`` slice until drained.
 
         Args:
             params: The buffering params (buffered input + parsed args).
             finalize_state_id: The finalize stream key.
-            state: The drain cursor; ensures the result is emitted once.
+            state: The offset cursor (computed once, then paged).
             out: Sink for the output batch / stream completion.
         """
-        if state.done:
-            out.finish()
-            return
-        state.done = True
-        a = params.args
-        df = cls.buffered_frame(params)
-        result = recommender.recommend_for(
-            df,
-            user=a.user,
-            item=a.item,
-            value=a.value,
-            target_user=a.target_user,
-            n=a.n,
-            factors=a.factors,
-        )
-        out.emit(pa.RecordBatch.from_pydict(result, schema=params.output_schema))
+        if not state.started:
+            a = params.args
+            df = cls.buffered_frame(params)
+            result = recommender.recommend_for(
+                df,
+                user=a.user,
+                item=a.item,
+                value=a.value,
+                target_user=a.target_user,
+                n=a.n,
+                factors=a.factors,
+            )
+            batch = pa.RecordBatch.from_pydict(result, schema=params.output_schema)
+            state.result_ipc = result_to_ipc(batch)
+            state.started = True
+            state.offset = 0
+        _emit_next_slice(state, out, params.output_schema)
 
 
 TABLE_FUNCTIONS: list[type] = [RecommendAll, SimilarItems, RecommendFor]
