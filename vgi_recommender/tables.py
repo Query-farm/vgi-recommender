@@ -167,6 +167,16 @@ class RecommendAll(SinkBuffer[RecommendAllArgs, DrainState]):
                 description="Top-10 recommendations per user",
             )
         ]
+        tags = {
+            "vgi.columns_md": (
+                "| Column | Type | Description |\n"
+                "| --- | --- | --- |\n"
+                "| `user` | VARCHAR | User id (original, as supplied). |\n"
+                "| `item` | VARCHAR | Recommended item id (not previously interacted with). |\n"
+                "| `score` | DOUBLE | ALS recommendation score (higher = stronger). |\n"
+                "| `rank` | INTEGER | Rank within this user's recommendations (1 = best). |"
+            ),
+        }
 
     @classmethod
     def on_bind(cls, params: BindParams[RecommendAllArgs]) -> BindResponse:
@@ -235,6 +245,16 @@ class SimilarItems(SinkBuffer[SimilarItemsArgs, DrainState]):
                 description="Top-5 similar items per item",
             )
         ]
+        tags = {
+            "vgi.columns_md": (
+                "| Column | Type | Description |\n"
+                "| --- | --- | --- |\n"
+                "| `item` | VARCHAR | Item id (original, as supplied). |\n"
+                "| `similar_item` | VARCHAR | A similar item id. |\n"
+                "| `similarity` | DOUBLE | Cosine similarity of ALS item factors (1 = identical). |\n"
+                "| `rank` | INTEGER | Rank within this item's neighbours (1 = most similar). |"
+            ),
+        }
 
     @classmethod
     def on_bind(cls, params: BindParams[SimilarItemsArgs]) -> BindResponse:
@@ -304,6 +324,15 @@ class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
                 description="Top-5 recommendations for one user",
             )
         ]
+        tags = {
+            "vgi.columns_md": (
+                "| Column | Type | Description |\n"
+                "| --- | --- | --- |\n"
+                "| `item` | VARCHAR | Recommended item id (not previously interacted with). |\n"
+                "| `score` | DOUBLE | ALS recommendation score (higher = stronger). |\n"
+                "| `rank` | INTEGER | Rank within the recommendations (1 = best). |"
+            ),
+        }
 
     @classmethod
     def on_bind(cls, params: BindParams[RecommendForArgs]) -> BindResponse:
