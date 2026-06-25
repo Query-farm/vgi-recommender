@@ -13,6 +13,7 @@ here.
 
 from __future__ import annotations
 
+import json
 import sys
 
 from vgi import Worker
@@ -54,14 +55,30 @@ _SCHEMA_DESCRIPTION_LLM = (
 )
 
 _SCHEMA_DESCRIPTION_MD = (
-    "Collaborative-filtering recommendation functions (implicit-feedback ALS) "
-    "over a (user, item, value) interaction relation."
+    "Collaborative-filtering recommendation table functions powered by "
+    "implicit-feedback ALS, operating over a (user, item, value) interaction "
+    "relation passed as a single subquery. Contains `recommend_all` (top-N "
+    "recommended items per user), `similar_items` (top-N item-item neighbours by "
+    "cosine of the ALS item factors), and `recommend_for` (top-N recommendations "
+    "for one target user). Use these for personalized recommendations, "
+    "'people who liked X also liked Y', and item-similarity surfaces directly in SQL."
 )
 
-_SCHEMA_KEYWORDS = (
-    "recommender, recommendations, collaborative filtering, ALS, implicit feedback, "
-    "recommend_all, similar_items, recommend_for, similar items, personalization, "
-    "matrix factorization, top-N"
+_SCHEMA_KEYWORDS = json.dumps(
+    [
+        "recommender",
+        "recommendations",
+        "collaborative filtering",
+        "ALS",
+        "implicit feedback",
+        "recommend_all",
+        "similar_items",
+        "recommend_for",
+        "similar items",
+        "personalization",
+        "matrix factorization",
+        "top-N",
+    ]
 )
 
 # A small inline planted-signal interaction relation (no pre-existing table needed)
@@ -102,7 +119,6 @@ _SCHEMA_TAGS = {
     "vgi.keywords": _SCHEMA_KEYWORDS,
     "vgi.doc_llm": _SCHEMA_DESCRIPTION_LLM,
     "vgi.doc_md": _SCHEMA_DESCRIPTION_MD,
-    "vgi.source_url": "https://github.com/Query-farm/vgi-recommender/blob/main/vgi_recommender/worker.py",
     "vgi.example_queries": _SCHEMA_EXAMPLE_QUERIES,
     # VGI123 classifying tags use BARE keys (not vgi.-namespaced).
     "domain": "machine-learning",

@@ -43,14 +43,6 @@ from .schema_utils import field as sfield
 # Per-object discovery/description metadata (vgi-lint strict profile)
 # ---------------------------------------------------------------------------
 
-_SOURCE_BASE = "https://github.com/Query-farm/vgi-recommender/blob/main/vgi_recommender"
-
-
-def _source_url(relative_path: str) -> str:
-    """Build the canonical GitHub blob URL for a source file under ``vgi_recommender``."""
-    return f"{_SOURCE_BASE}/{relative_path}"
-
-
 # A small, self-contained planted-signal interaction relation used by the
 # guaranteed-runnable examples. ``u1``/``u2`` interacted with {A, B, C};
 # ``u3``/``u4`` with only {A, B}; so collaborative filtering recommends ``C`` to
@@ -238,11 +230,20 @@ class RecommendAll(SinkBuffer[RecommendAllArgs, DrainState]):
                 "- `value` (confidence) defaults to 1.0 if the column is missing; `factors` is "
                 "auto-clamped on small matrices."
             ),
-            "vgi.keywords": (
-                "recommend, recommendation, recommender, collaborative filtering, ALS, "
-                "implicit feedback, top-N, personalization, batch recommendations, matrix factorization"
+            "vgi.keywords": json.dumps(
+                [
+                    "recommend",
+                    "recommendation",
+                    "recommender",
+                    "collaborative filtering",
+                    "ALS",
+                    "implicit feedback",
+                    "top-N",
+                    "personalization",
+                    "batch recommendations",
+                    "matrix factorization",
+                ]
             ),
-            "vgi.source_url": _source_url("tables.py"),
             "vgi.result_columns_md": (
                 "| Column | Type | Description |\n"
                 "| --- | --- | --- |\n"
@@ -383,11 +384,20 @@ class SimilarItems(SinkBuffer[SimilarItemsArgs, DrainState]):
                 "- `value` (confidence) defaults to 1.0 if the column is missing; `factors` is "
                 "auto-clamped on small matrices."
             ),
-            "vgi.keywords": (
-                "similar items, item similarity, related items, item-item, more like this, "
-                "nearest neighbours, cosine similarity, collaborative filtering, ALS, recommendations"
+            "vgi.keywords": json.dumps(
+                [
+                    "similar items",
+                    "item similarity",
+                    "related items",
+                    "item-item",
+                    "more like this",
+                    "nearest neighbours",
+                    "cosine similarity",
+                    "collaborative filtering",
+                    "ALS",
+                    "recommendations",
+                ]
             ),
-            "vgi.source_url": _source_url("tables.py"),
             "vgi.result_columns_md": (
                 "| Column | Type | Description |\n"
                 "| --- | --- | --- |\n"
@@ -521,11 +531,19 @@ class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
                 "- Already-seen items are never recommended; `value` (confidence) defaults to 1.0 "
                 "if the column is missing."
             ),
-            "vgi.keywords": (
-                "recommend for user, single user recommendations, personalized, recommend_for, "
-                "top-N, collaborative filtering, ALS, implicit feedback, user recommendations"
+            "vgi.keywords": json.dumps(
+                [
+                    "recommend for user",
+                    "single user recommendations",
+                    "personalized",
+                    "recommend_for",
+                    "top-N",
+                    "collaborative filtering",
+                    "ALS",
+                    "implicit feedback",
+                    "user recommendations",
+                ]
             ),
-            "vgi.source_url": _source_url("tables.py"),
             "vgi.result_columns_md": (
                 "| Column | Type | Description |\n"
                 "| --- | --- | --- |\n"
