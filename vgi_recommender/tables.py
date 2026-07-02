@@ -188,6 +188,7 @@ class RecommendAll(SinkBuffer[RecommendAllArgs, DrainState]):
         ]
         tags = {
             "vgi.title": "Recommend Items for All Users",
+            "vgi.category": "user-recommendations",
             "vgi.doc_llm": (
                 "# recommend_all\n\n"
                 "Batch collaborative-filtering recommender. Consumes a whole relation of "
@@ -342,6 +343,7 @@ class SimilarItems(SinkBuffer[SimilarItemsArgs, DrainState]):
         ]
         tags = {
             "vgi.title": "Find Similar Items by Co-Interaction",
+            "vgi.category": "item-similarity",
             "vgi.doc_llm": (
                 "# similar_items\n\n"
                 "Item-to-item collaborative-filtering neighbour finder. Fits implicit-feedback ALS "
@@ -473,8 +475,9 @@ class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
 
         name = "recommend_for"
         description = (
-            "Top-N recommended items for ONE user (target_user, a named scalar arg), excluding "
-            "already-seen items, as (item, score, rank). Empty if target_user is unknown."
+            "Top-N recommended items for a single specified user, excluding items that user has "
+            "already interacted with, as (item, score, rank). Returns no rows when the requested "
+            "user is absent from the interaction relation."
         )
         categories = ["recommender", "collaborative-filtering"]
         examples = [
@@ -489,6 +492,7 @@ class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
         ]
         tags = {
             "vgi.title": "Recommend Items for One User",
+            "vgi.category": "user-recommendations",
             "vgi.doc_llm": (
                 "# recommend_for\n\n"
                 "Single-user collaborative-filtering recommender. Fits implicit-feedback ALS over "
@@ -521,8 +525,7 @@ class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
                 "```sql\n"
                 "SELECT * FROM recommender.recommend_for(\n"
                 "    (SELECT user_id, item_id, weight FROM events),\n"
-                "    user := 'user_id', item := 'item_id', value := 'weight',\n"
-                "    target_user := 'alice', n := 5)\n"
+                "    user := 'user_id', item := 'item_id', value := 'weight', target_user := 'alice', n := 5)\n"
                 "ORDER BY rank;\n"
                 "```\n\n"
                 "### Notes\n\n"
