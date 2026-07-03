@@ -13,6 +13,7 @@ here.
 
 from __future__ import annotations
 
+import json
 import sys
 
 from vgi import Worker
@@ -35,15 +36,51 @@ _CATALOG_DESCRIPTION_LLM = (
 )
 
 _CATALOG_DESCRIPTION_MD = (
-    "# recommender\n\n"
-    "Collaborative-filtering recommendations (implicit-feedback ALS) for DuckDB "
-    "via VGI, powered by [implicit](https://github.com/benfred/implicit).\n\n"
-    "Each function consumes the whole interaction relation as a "
-    "`(SELECT user, item, value)` subquery (positional `Arg(0)`) plus the column "
-    "roles and hyperparameters as named args "
+    "# Recommender: Collaborative-Filtering Recommendations in SQL\n\n"
+    "Generate personalized product and content recommendations directly in "
+    "DuckDB SQL with implicit-feedback **Alternating Least Squares (ALS)** "
+    "collaborative filtering -- no separate ML pipeline, notebook, or model "
+    "server required.\n\n"
+    "This VGI worker turns a single relation of `(user, item, value)` "
+    "interactions -- clicks, purchases, plays, ratings, or any engagement "
+    "signal -- into top-N recommendations, item-to-item similarity, and "
+    "per-user suggestions. It is built for data engineers, analysts, and "
+    "application developers who want a fast, reproducible recommender system "
+    "they can call from a query instead of standing up a dedicated service. "
+    "Because it runs as a DuckDB attachment, you can join recommendations "
+    "straight back to your catalog tables, filter them, and ship them to "
+    "downstream tables or dashboards in a single statement.\n\n"
+    "Under the hood the worker fits an implicit-feedback ALS matrix-"
+    "factorization model with the [`implicit`](https://github.com/benfred/"
+    "implicit) library by Ben Frederickson -- a fast, Cython/BLAS-accelerated "
+    "implementation of the classic ALS algorithm for implicit datasets. Each "
+    "call buffers the whole interaction relation, learns latent user and item "
+    "factors, and scores candidates by the dot product (recommendations) or "
+    "the cosine of the item factors (similarity). Results are deterministic "
+    "(pinned `random_state`, single-threaded BLAS), and `value` is treated as "
+    "the interaction confidence, defaulting to `1.0` when the value column is "
+    "omitted. See the [implicit documentation](https://benfred.github.io/"
+    "implicit/) and the [collaborative filtering overview](https://en."
+    "wikipedia.org/wiki/Collaborative_filtering) for background on the method.\n\n"
+    "## Function surface\n\n"
+    "Three SQL table functions cover the common recommender workloads:\n\n"
+    "- `recommend_all` -- top-N recommended items for **every** user "
+    "(personalized recommendations at scale).\n"
+    "- `similar_items` -- top-N nearest item-item neighbours by cosine of the "
+    'ALS item factors (the classic *"people who liked X also liked Y"* / '
+    "related-items surface).\n"
+    "- `recommend_for` -- top-N recommendations for a **single** target user.\n\n"
+    "Every function takes the interaction relation as a positional "
+    "`(SELECT user, item, value)` subquery (`Arg(0)`) and accepts the column "
+    "roles and hyperparameters as named arguments "
     "(`user := ...`, `item := ...`, `value := ...`, `n := ...`, "
-    "`factors := ...`).\n\n"
-    "Table functions: `recommend_all`, `similar_items`, `recommend_for`."
+    "`factors := ...`). For example:\n\n"
+    "```sql\n"
+    "SELECT * FROM recommender.recommend_all(\n"
+    "    (SELECT user_id, item_id, weight FROM events),\n"
+    "    user := 'user_id', item := 'item_id', value := 'weight', n := 10)\n"
+    "ORDER BY user, rank;\n"
+    "```\n"
 )
 
 _SCHEMA_DESCRIPTION_LLM = (
@@ -54,14 +91,41 @@ _SCHEMA_DESCRIPTION_LLM = (
 )
 
 _SCHEMA_DESCRIPTION_MD = (
-    "Collaborative-filtering recommendation functions (implicit-feedback ALS) "
-    "over a (user, item, value) interaction relation."
+    "# Recommendation Functions\n\n"
+    "Collaborative-filtering recommendation table functions powered by "
+    "implicit-feedback **Alternating Least Squares (ALS)**. Each function takes a "
+    "single relation of `(user, item, value)` interactions as a subquery and fits "
+    "a matrix-factorization model over the whole user x item matrix before "
+    "emitting results.\n\n"
+    "## Key concepts\n\n"
+    "- **Interaction relation** -- one row per user/item interaction; `value` is "
+    "the interaction confidence and defaults to `1.0` when omitted.\n"
+    "- **Latent factors** -- ALS learns dense user and item vectors; scores are "
+    "dot products (recommendations) or cosines (item similarity).\n"
+    "- **Determinism** -- a pinned `random_state` and single-threaded BLAS make "
+    "every call reproducible.\n\n"
+    "## When to use\n\n"
+    "Reach for these functions to generate personalized recommendations, build "
+    "'people who liked X also liked Y' related-item surfaces, or score a single "
+    "user on demand -- all directly in SQL, without a separate ML service or "
+    "feature pipeline."
 )
 
-_SCHEMA_KEYWORDS = (
-    "recommender, recommendations, collaborative filtering, ALS, implicit feedback, "
-    "recommend_all, similar_items, recommend_for, similar items, personalization, "
-    "matrix factorization, top-N"
+_SCHEMA_KEYWORDS = json.dumps(
+    [
+        "recommender",
+        "recommendations",
+        "collaborative filtering",
+        "ALS",
+        "implicit feedback",
+        "recommend_all",
+        "similar_items",
+        "recommend_for",
+        "similar items",
+        "personalization",
+        "matrix factorization",
+        "top-N",
+    ]
 )
 
 # A small inline planted-signal interaction relation (no pre-existing table needed)
@@ -85,11 +149,73 @@ _SCHEMA_EXAMPLE_QUERIES = (
     "user := 'u', item := 'i', value := 'v', target_user := 'u3', n := 2) ORDER BY rank;"
 )
 
+# Agent-suitability suite (VGI152/VGI920). Each prompt fully specifies its own
+# interaction data (there is no pre-existing table) so an analyst who has only
+# read the catalog metadata can reproduce it; the grader-only reference_sql uses
+# the planted-signal relation (u1/u2 saw {A,B,C}; u3/u4 saw {A,B}), which makes C
+# the novel recommendation for u3/u4 and A/B mutual nearest neighbours. ALS is
+# seeded (pinned random_state, single-threaded BLAS) so these references are
+# deterministic. Comparisons are relaxed (ignore_column_names/unordered) because
+# only the returned id set matters, not the analyst's column aliases or row order.
+_AGENT_TEST_TASKS = json.dumps(
+    [
+        {
+            "name": "recommend_for_single_user",
+            "prompt": (
+                "There is no pre-existing table. Consider these interactions: user u1 "
+                "interacted with items A, B and C; u2 with A, B and C; u3 with A and B; "
+                "u4 with A and B. Recommend the single best new item for user u3 -- one "
+                "they have not already interacted with. Return just the item id."
+            ),
+            "reference_sql": (
+                f"SELECT item FROM recommender.recommend_for({_EVENTS_VALUES}, "
+                "user := 'u', item := 'i', value := 'v', target_user := 'u3', n := 1)"
+            ),
+            "success_criteria": "Returns exactly one row whose item id is C.",
+            "ignore_column_names": True,
+            "unordered": True,
+        },
+        {
+            "name": "most_similar_item",
+            "prompt": (
+                "There is no pre-existing table. Given interactions where u1 and u2 each "
+                "interacted with items A, B and C, and u3 and u4 each interacted with only "
+                "A and B, find the item most similar to item A (excluding A itself). "
+                "Return the similar item's id."
+            ),
+            "reference_sql": (
+                f"SELECT similar_item FROM recommender.similar_items({_EVENTS_VALUES}, "
+                "user := 'u', item := 'i', value := 'v', n := 1) WHERE item = 'A'"
+            ),
+            "success_criteria": "Returns exactly one row whose similar item id is B.",
+            "ignore_column_names": True,
+            "unordered": True,
+        },
+        {
+            "name": "top_item_per_user",
+            "prompt": (
+                "There is no pre-existing table. Given interactions where u1 and u2 each "
+                "interacted with items A, B and C, and u3 and u4 each interacted with only "
+                "A and B, list the single top recommended new item for every user that has "
+                "one, returning the user id alongside the recommended item id."
+            ),
+            "reference_sql": (
+                f"SELECT user, item FROM recommender.recommend_all({_EVENTS_VALUES}, "
+                "user := 'u', item := 'i', value := 'v', n := 1) ORDER BY user"
+            ),
+            "success_criteria": "Returns (u3, C) and (u4, C); u1/u2 have no new items to recommend.",
+            "ignore_column_names": True,
+            "unordered": True,
+        },
+    ]
+)
+
 _CATALOG_TAGS = {
     "vgi.title": "Collaborative-Filtering Recommendations",
     "vgi.keywords": _SCHEMA_KEYWORDS,
     "vgi.doc_llm": _CATALOG_DESCRIPTION_LLM,
     "vgi.doc_md": _CATALOG_DESCRIPTION_MD,
+    "vgi.agent_test_tasks": _AGENT_TEST_TASKS,
     "vgi.author": "Query.Farm",
     "vgi.copyright": "Copyright 2026 Query Farm LLC - https://query.farm",
     "vgi.license": "MIT",
@@ -97,16 +223,34 @@ _CATALOG_TAGS = {
     "vgi.support_policy_url": "https://github.com/Query-farm/vgi-recommender/blob/main/README.md",
 }
 
+_SCHEMA_CATEGORIES = json.dumps(
+    [
+        {
+            "name": "user-recommendations",
+            "description": (
+                "Personalized top-N item recommendations for users -- for the whole "
+                "user base at once or for a single target user."
+            ),
+        },
+        {
+            "name": "item-similarity",
+            "description": (
+                "Item-to-item neighbours by cosine of the ALS item factors -- "
+                "'related items' / 'people who liked X also liked Y' surfaces."
+            ),
+        },
+    ]
+)
+
 _SCHEMA_TAGS = {
     "vgi.title": "Recommender Functions (main)",
     "vgi.keywords": _SCHEMA_KEYWORDS,
     "vgi.doc_llm": _SCHEMA_DESCRIPTION_LLM,
     "vgi.doc_md": _SCHEMA_DESCRIPTION_MD,
-    "vgi.source_url": "https://github.com/Query-farm/vgi-recommender/blob/main/vgi_recommender/worker.py",
     "vgi.example_queries": _SCHEMA_EXAMPLE_QUERIES,
+    "vgi.categories": _SCHEMA_CATEGORIES,
     # VGI123 classifying tags use BARE keys (not vgi.-namespaced).
     "domain": "machine-learning",
-    "category": "recommender-systems",
     "topic": "collaborative-filtering",
 }
 
