@@ -180,7 +180,7 @@ class RecommendAll(SinkBuffer[RecommendAllArgs, DrainState]):
         examples = [
             FunctionExample(
                 sql=(
-                    f"SELECT * FROM recommender.recommend_all({_EVENTS_VALUES}, "
+                    f"SELECT user, item, rank FROM recommender.main.recommend_all({_EVENTS_VALUES}, "
                     "user := 'u', item := 'i', value := 'v', n := 3) ORDER BY user, rank"
                 ),
                 description="Top-3 recommendations per user",
@@ -218,12 +218,11 @@ class RecommendAll(SinkBuffer[RecommendAllArgs, DrainState]):
                 "Top-N collaborative-filtering recommendations for **all** users, computed with "
                 "implicit-feedback ALS over the supplied interaction relation.\n\n"
                 "### Usage\n\n"
-                "```sql\n"
-                "SELECT * FROM recommender.recommend_all(\n"
-                "    (SELECT user_id, item_id, weight FROM events),\n"
-                "    user := 'user_id', item := 'item_id', value := 'weight', n := 10)\n"
-                "ORDER BY user, rank;\n"
-                "```\n\n"
+                "Pass the interaction relation as the positional `(user, item, value)` subquery "
+                "and name the role columns plus `n` (recommendations per user). Each output row "
+                "is `(user, item, score, rank)`; order by `user` then `rank` for a stable, "
+                "per-user ranked list. A ready-to-run demonstration lives in this function's "
+                "example queries.\n\n"
                 "### Notes\n\n"
                 "- One ALS model is fit over the entire matrix, so the whole relation is buffered "
                 "before any rows are emitted.\n"
@@ -245,27 +244,35 @@ class RecommendAll(SinkBuffer[RecommendAllArgs, DrainState]):
                     "matrix factorization",
                 ]
             ),
-            "vgi.result_columns_md": (
-                "| Column | Type | Description |\n"
-                "| --- | --- | --- |\n"
-                "| `user` | VARCHAR | User id (original, as supplied). |\n"
-                "| `item` | VARCHAR | Recommended item id (not previously interacted with). |\n"
-                "| `score` | DOUBLE | ALS recommendation score (higher = stronger). |\n"
-                "| `rank` | INTEGER | Rank within this user's recommendations (1 = best). |"
+            "vgi.result_columns_schema": json.dumps(
+                [
+                    {"name": "user", "type": "VARCHAR", "description": "User id (original, as supplied)."},
+                    {
+                        "name": "item",
+                        "type": "VARCHAR",
+                        "description": "Recommended item id (not previously interacted with).",
+                    },
+                    {"name": "score", "type": "DOUBLE", "description": "ALS recommendation score (higher = stronger)."},
+                    {
+                        "name": "rank",
+                        "type": "INTEGER",
+                        "description": "Rank within this user's recommendations (1 = best).",
+                    },
+                ]
             ),
             "vgi.executable_examples": json.dumps(
                 [
                     {
                         "description": "Top-3 recommendations per user over an inline interaction relation.",
                         "sql": (
-                            f"SELECT user, item, rank FROM recommender.recommend_all({_EVENTS_VALUES}, "
+                            f"SELECT user, item, rank FROM recommender.main.recommend_all({_EVENTS_VALUES}, "
                             "user := 'u', item := 'i', value := 'v', n := 3) ORDER BY user, rank"
                         ),
                     },
                     {
                         "description": "Recommend novel item C to users u3 and u4 (planted CF signal).",
                         "sql": (
-                            f"SELECT user, item FROM recommender.recommend_all({_EVENTS_VALUES}, "
+                            f"SELECT user, item FROM recommender.main.recommend_all({_EVENTS_VALUES}, "
                             "user := 'u', item := 'i', value := 'v', n := 1) "
                             "WHERE user IN ('u3', 'u4') ORDER BY user"
                         ),
@@ -335,7 +342,7 @@ class SimilarItems(SinkBuffer[SimilarItemsArgs, DrainState]):
         examples = [
             FunctionExample(
                 sql=(
-                    f"SELECT * FROM recommender.similar_items({_EVENTS_VALUES}, "
+                    f"SELECT item, similar_item, rank FROM recommender.main.similar_items({_EVENTS_VALUES}, "
                     "user := 'u', item := 'i', value := 'v', n := 2) ORDER BY item, rank"
                 ),
                 description="Top-2 similar items per item",
@@ -373,12 +380,11 @@ class SimilarItems(SinkBuffer[SimilarItemsArgs, DrainState]):
                 "Top-N most **similar items** for every item, by cosine similarity of "
                 "implicit-feedback ALS item factors over the supplied interaction relation.\n\n"
                 "### Usage\n\n"
-                "```sql\n"
-                "SELECT * FROM recommender.similar_items(\n"
-                "    (SELECT user_id, item_id, weight FROM events),\n"
-                "    user := 'user_id', item := 'item_id', value := 'weight', n := 5)\n"
-                "ORDER BY item, rank;\n"
-                "```\n\n"
+                "Pass the interaction relation as the positional `(user, item, value)` subquery "
+                "and name the role columns plus `n` (neighbours per item). Each output row is "
+                "`(item, similar_item, similarity, rank)`; order by `item` then `rank` for a "
+                "stable neighbour list. A ready-to-run demonstration lives in this function's "
+                "example queries.\n\n"
                 "### Notes\n\n"
                 "- The query item itself is excluded from its own neighbour list.\n"
                 "- One ALS model is fit over the whole matrix, so the relation is fully buffered "
@@ -400,20 +406,28 @@ class SimilarItems(SinkBuffer[SimilarItemsArgs, DrainState]):
                     "recommendations",
                 ]
             ),
-            "vgi.result_columns_md": (
-                "| Column | Type | Description |\n"
-                "| --- | --- | --- |\n"
-                "| `item` | VARCHAR | Item id (original, as supplied). |\n"
-                "| `similar_item` | VARCHAR | A similar item id. |\n"
-                "| `similarity` | DOUBLE | Cosine similarity of ALS item factors (1 = identical). |\n"
-                "| `rank` | INTEGER | Rank within this item's neighbours (1 = most similar). |"
+            "vgi.result_columns_schema": json.dumps(
+                [
+                    {"name": "item", "type": "VARCHAR", "description": "Item id (original, as supplied)."},
+                    {"name": "similar_item", "type": "VARCHAR", "description": "A similar item id."},
+                    {
+                        "name": "similarity",
+                        "type": "DOUBLE",
+                        "description": "Cosine similarity of ALS item factors (1 = identical).",
+                    },
+                    {
+                        "name": "rank",
+                        "type": "INTEGER",
+                        "description": "Rank within this item's neighbours (1 = most similar).",
+                    },
+                ]
             ),
             "vgi.executable_examples": json.dumps(
                 [
                     {
                         "description": "Top-2 most similar items for every item in an inline relation.",
                         "sql": (
-                            f"SELECT item, similar_item, rank FROM recommender.similar_items({_EVENTS_VALUES}, "
+                            f"SELECT item, similar_item, rank FROM recommender.main.similar_items({_EVENTS_VALUES}, "
                             "user := 'u', item := 'i', value := 'v', n := 2) ORDER BY item, rank"
                         ),
                     }
@@ -483,7 +497,7 @@ class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
         examples = [
             FunctionExample(
                 sql=(
-                    f"SELECT * FROM recommender.recommend_for({_EVENTS_VALUES}, "
+                    f"SELECT item, rank FROM recommender.main.recommend_for({_EVENTS_VALUES}, "
                     "user := 'u', item := 'i', value := 'v', target_user := 'u3', n := 2) "
                     "ORDER BY rank"
                 ),
@@ -522,12 +536,11 @@ class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
                 "Top-N collaborative-filtering recommendations for a **single target user**, "
                 "computed with implicit-feedback ALS over the supplied interaction relation.\n\n"
                 "### Usage\n\n"
-                "```sql\n"
-                "SELECT * FROM recommender.recommend_for(\n"
-                "    (SELECT user_id, item_id, weight FROM events),\n"
-                "    user := 'user_id', item := 'item_id', value := 'weight', target_user := 'alice', n := 5)\n"
-                "ORDER BY rank;\n"
-                "```\n\n"
+                "Pass the interaction relation as the positional `(user, item, value)` subquery, "
+                "name the role columns, and set `target_user` to the id of the one user to score "
+                "(plus `n`, the number of recommendations). Each output row is `(item, score, "
+                "rank)`, ordered by `rank`. A ready-to-run demonstration lives in this function's "
+                "example queries.\n\n"
                 "### Notes\n\n"
                 "- `target_user` is a named scalar argument naming the one user to score.\n"
                 "- An unknown `target_user` returns an empty result rather than raising.\n"
@@ -547,19 +560,23 @@ class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
                     "user recommendations",
                 ]
             ),
-            "vgi.result_columns_md": (
-                "| Column | Type | Description |\n"
-                "| --- | --- | --- |\n"
-                "| `item` | VARCHAR | Recommended item id (not previously interacted with). |\n"
-                "| `score` | DOUBLE | ALS recommendation score (higher = stronger). |\n"
-                "| `rank` | INTEGER | Rank within the recommendations (1 = best). |"
+            "vgi.result_columns_schema": json.dumps(
+                [
+                    {
+                        "name": "item",
+                        "type": "VARCHAR",
+                        "description": "Recommended item id (not previously interacted with).",
+                    },
+                    {"name": "score", "type": "DOUBLE", "description": "ALS recommendation score (higher = stronger)."},
+                    {"name": "rank", "type": "INTEGER", "description": "Rank within the recommendations (1 = best)."},
+                ]
             ),
             "vgi.executable_examples": json.dumps(
                 [
                     {
                         "description": "Top-2 recommendations for a single target user (u3).",
                         "sql": (
-                            f"SELECT item, rank FROM recommender.recommend_for({_EVENTS_VALUES}, "
+                            f"SELECT item, rank FROM recommender.main.recommend_for({_EVENTS_VALUES}, "
                             "user := 'u', item := 'i', value := 'v', target_user := 'u3', n := 2) "
                             "ORDER BY rank"
                         ),

@@ -17,7 +17,7 @@ import json
 import sys
 
 from vgi import Worker
-from vgi.catalog import Catalog, Schema
+from vgi.catalog import Catalog, Schema, View
 
 from vgi_recommender.tables import TABLE_FUNCTIONS
 
@@ -63,24 +63,18 @@ _CATALOG_DESCRIPTION_MD = (
     "implicit/) and the [collaborative filtering overview](https://en."
     "wikipedia.org/wiki/Collaborative_filtering) for background on the method.\n\n"
     "## Function surface\n\n"
-    "Three SQL table functions cover the common recommender workloads:\n\n"
-    "- `recommend_all` -- top-N recommended items for **every** user "
-    "(personalized recommendations at scale).\n"
-    "- `similar_items` -- top-N nearest item-item neighbours by cosine of the "
-    'ALS item factors (the classic *"people who liked X also liked Y"* / '
-    "related-items surface).\n"
-    "- `recommend_for` -- top-N recommendations for a **single** target user.\n\n"
-    "Every function takes the interaction relation as a positional "
-    "`(SELECT user, item, value)` subquery (`Arg(0)`) and accepts the column "
+    "The worker covers the three everyday collaborative-filtering workloads: "
+    "personalized top-N recommendations for the whole user base at once, "
+    "on-demand recommendations for a single target user, and item-to-item "
+    'nearest-neighbour lookups (the classic *"people who liked X also liked '
+    'Y"* / related-items surface).\n\n'
+    "Every recommendation function takes the interaction relation as a positional "
+    "`(user, item, value)` subquery (`Arg(0)`) and accepts the column "
     "roles and hyperparameters as named arguments "
     "(`user := ...`, `item := ...`, `value := ...`, `n := ...`, "
-    "`factors := ...`). For example:\n\n"
-    "```sql\n"
-    "SELECT * FROM recommender.recommend_all(\n"
-    "    (SELECT user_id, item_id, weight FROM events),\n"
-    "    user := 'user_id', item := 'item_id', value := 'weight', n := 10)\n"
-    "ORDER BY user, rank;\n"
-    "```\n"
+    "`factors := ...`). List the schema to see the exact object names, browse the "
+    "discovery registry view to learn each function's argument and result surface, "
+    "and read a function's own example queries for ready-to-run demonstrations.\n"
 )
 
 _SCHEMA_DESCRIPTION_LLM = (
@@ -168,7 +162,7 @@ _AGENT_TEST_TASKS = json.dumps(
                 "they have not already interacted with. Return just the item id."
             ),
             "reference_sql": (
-                f"SELECT item FROM recommender.recommend_for({_EVENTS_VALUES}, "
+                f"SELECT item FROM recommender.main.recommend_for({_EVENTS_VALUES}, "
                 "user := 'u', item := 'i', value := 'v', target_user := 'u3', n := 1)"
             ),
             "success_criteria": "Returns exactly one row whose item id is C.",
@@ -184,7 +178,7 @@ _AGENT_TEST_TASKS = json.dumps(
                 "Return the similar item's id."
             ),
             "reference_sql": (
-                f"SELECT similar_item FROM recommender.similar_items({_EVENTS_VALUES}, "
+                f"SELECT similar_item FROM recommender.main.similar_items({_EVENTS_VALUES}, "
                 "user := 'u', item := 'i', value := 'v', n := 1) WHERE item = 'A'"
             ),
             "success_criteria": "Returns exactly one row whose similar item id is B.",
@@ -200,10 +194,24 @@ _AGENT_TEST_TASKS = json.dumps(
                 "one, returning the user id alongside the recommended item id."
             ),
             "reference_sql": (
-                f"SELECT user, item FROM recommender.recommend_all({_EVENTS_VALUES}, "
+                f"SELECT user, item FROM recommender.main.recommend_all({_EVENTS_VALUES}, "
                 "user := 'u', item := 'i', value := 'v', n := 1) ORDER BY user"
             ),
             "success_criteria": "Returns (u3, C) and (u4, C); u1/u2 have no new items to recommend.",
+            "ignore_column_names": True,
+            "unordered": True,
+        },
+        {
+            "name": "discover_similarity_function",
+            "prompt": (
+                "This worker publishes a browsable discovery view that lists its recommendation "
+                "functions, each tagged with a category. Using that view, find the name of the "
+                "function whose category is item-to-item similarity. Return just the function name."
+            ),
+            "reference_sql": (
+                "SELECT function_name FROM recommender.main.recommender_functions WHERE category = 'item-similarity'"
+            ),
+            "success_criteria": "Returns exactly one row whose function name is similar_items.",
             "ignore_column_names": True,
             "unordered": True,
         },
@@ -239,6 +247,13 @@ _SCHEMA_CATEGORIES = json.dumps(
                 "'related items' / 'people who liked X also liked Y' surfaces."
             ),
         },
+        {
+            "name": "discovery",
+            "description": (
+                "Browsable registry/metadata objects that describe the worker's own "
+                "recommendation functions (their arguments and result columns)."
+            ),
+        },
     ]
 )
 
@@ -254,6 +269,110 @@ _SCHEMA_TAGS = {
     "topic": "collaborative-filtering",
 }
 
+# A browsable, credential-free registry of the worker's table functions (VGI146).
+# Backed by an inline VALUES scan so it needs no network, table, or model fit --
+# an agent can query it to discover what functions exist, what they return, and
+# which named arguments they take before ever constructing a call. Kept in lock-
+# step with tables.py by hand (three rows, one per TABLE_FUNCTION).
+_FUNCTIONS_VIEW_DEFINITION = (
+    "SELECT function_name, category, purpose, key_arguments, output_columns FROM (VALUES "
+    "('recommend_all', 'user-recommendations', "
+    "'Top-N recommended items for every user in the interaction relation.', "
+    "'user, item, value, n, factors', 'user, item, score, rank'), "
+    "('recommend_for', 'user-recommendations', "
+    "'Top-N recommended items for one target user (named target_user argument).', "
+    "'user, item, value, target_user, n, factors', 'item, score, rank'), "
+    "('similar_items', 'item-similarity', "
+    "'Top-N most similar items per item by cosine of the ALS item factors.', "
+    "'user, item, value, n, factors', 'item, similar_item, similarity, rank')"
+    ") AS t(function_name, category, purpose, key_arguments, output_columns)"
+)
+
+_FUNCTIONS_VIEW_DOC_LLM = (
+    "# recommender_functions\n\n"
+    "A browsable registry of the three collaborative-filtering table functions this "
+    "worker exposes, one row per function. Query it first to discover what is "
+    "available: each row gives the function name, its category "
+    "(user-recommendations vs item-similarity), a one-line purpose, the comma-"
+    "separated list of named arguments it accepts, and the columns it returns. It is "
+    "a static VALUES-backed view -- reading it fits no model and touches no network -- "
+    "so it is safe to scan freely while planning a query.\n\n"
+    "## When to use\n"
+    "Use it to answer 'which function should I call and what does it return?' before "
+    "constructing a `recommend_all` / `recommend_for` / `similar_items` call. The "
+    "`key_arguments` and `output_columns` strings mirror the per-function "
+    "documentation and the actual result schemas."
+)
+
+_FUNCTIONS_VIEW_DOC_MD = (
+    "## recommender_functions\n\n"
+    "A discovery view listing the worker's collaborative-filtering table functions, "
+    "one row per function. Each row records the function name, its category, a short "
+    "purpose, the named arguments it takes, and the columns it returns. Backed by an "
+    "inline `VALUES` scan, so it reads instantly with no model fit and no network.\n\n"
+    "### Columns\n\n"
+    "- `function_name` -- the callable name (`recommend_all`, `recommend_for`, "
+    "`similar_items`).\n"
+    "- `category` -- `user-recommendations` or `item-similarity`.\n"
+    "- `purpose` -- a one-line summary of what the function computes.\n"
+    "- `key_arguments` -- the comma-separated named arguments the function accepts.\n"
+    "- `output_columns` -- the comma-separated columns the function returns."
+)
+
+_RECOMMENDER_FUNCTIONS_VIEW = View(
+    name="recommender_functions",
+    definition=_FUNCTIONS_VIEW_DEFINITION,
+    comment="Discovery registry of the worker's recommendation table functions (one row per function).",
+    column_comments={
+        "function_name": "Name of the table function (recommend_all, recommend_for, similar_items).",
+        "category": "Function grouping: 'user-recommendations' or 'item-similarity'.",
+        "purpose": "One-line summary of what the function computes.",
+        "key_arguments": "Comma-separated named arguments the function accepts.",
+        "output_columns": "Comma-separated columns the function returns.",
+    },
+    tags={
+        "vgi.title": "Recommendation Functions Registry",
+        "vgi.category": "discovery",
+        # VGI123 classifying tags use BARE keys (not vgi.-namespaced).
+        "domain": "machine-learning",
+        "topic": "collaborative-filtering",
+        "vgi.doc_llm": _FUNCTIONS_VIEW_DOC_LLM,
+        "vgi.doc_md": _FUNCTIONS_VIEW_DOC_MD,
+        "vgi.keywords": json.dumps(
+            [
+                "functions",
+                "registry",
+                "discovery",
+                "catalog",
+                "recommend_all",
+                "recommend_for",
+                "similar_items",
+                "capabilities",
+            ]
+        ),
+        "vgi.example_queries": json.dumps(
+            [
+                {
+                    "description": "List the per-user recommendation functions and what each returns.",
+                    "sql": (
+                        "SELECT function_name, output_columns "
+                        "FROM recommender.main.recommender_functions "
+                        "WHERE category = 'user-recommendations' ORDER BY function_name"
+                    ),
+                },
+                {
+                    "description": "Discover the named arguments accepted by the similar_items function.",
+                    "sql": (
+                        "SELECT key_arguments "
+                        "FROM recommender.main.recommender_functions "
+                        "WHERE function_name = 'similar_items'"
+                    ),
+                },
+            ]
+        ),
+    },
+)
+
 _RECOMMENDER_CATALOG = Catalog(
     name="recommender",
     default_schema="main",
@@ -265,6 +384,7 @@ _RECOMMENDER_CATALOG = Catalog(
             name="main",
             comment="Recommendation table functions: recommend_all, similar_items, recommend_for.",
             tags=_SCHEMA_TAGS,
+            views=[_RECOMMENDER_FUNCTIONS_VIEW],
             functions=list(_FUNCTIONS),
         ),
     ],
