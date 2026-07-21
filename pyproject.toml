@@ -45,6 +45,12 @@ dependencies = [
 http = [
     "vgi-python[http]>=0.16.0",
 ]
+# HTTP-serving extra — installed by the Docker image (`pip install '.[serve]'`).
+# Alias of `http` (waitress via vgi-python[http]) under the conventional name
+# the container Dockerfile / docker-publish smoke expect.
+serve = [
+    "vgi-python[http]>=0.16.0",
+]
 dev = [
     "pytest>=8",
     "ruff",
