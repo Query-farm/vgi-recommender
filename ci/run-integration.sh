@@ -34,7 +34,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/.." && pwd)"
 STAGE="${STAGE:-$(mktemp -d)}"
 TRANSPORT="${TRANSPORT:-subprocess}"
-WORKER_CMD="${WORKER_CMD:-uv run --python 3.13 $REPO/recommender_worker.py}"
+WORKER_CMD="${WORKER_CMD:-$REPO/.venv/bin/python $REPO/recommender_worker.py}"
 
 echo "Staging preprocessed tests into $STAGE ..."
 mkdir -p "$STAGE/test/sql"

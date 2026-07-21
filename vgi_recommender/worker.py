@@ -72,9 +72,9 @@ _CATALOG_DESCRIPTION_MD = (
     "`(user, item, value)` subquery (`Arg(0)`) and accepts the column "
     "roles and hyperparameters as named arguments "
     "(`user := ...`, `item := ...`, `value := ...`, `n := ...`, "
-    "`factors := ...`). List the schema to see the exact object names, browse the "
-    "discovery registry view to learn each function's argument and result surface, "
-    "and read a function's own example queries for ready-to-run demonstrations.\n"
+    "`factors := ...`). The relation's columns are the data; the named arguments just "
+    "declare which column plays the user, item, and confidence role, so the same query "
+    "works over any interaction table by pointing the roles at its columns.\n"
 )
 
 _SCHEMA_DESCRIPTION_LLM = (
@@ -134,13 +134,30 @@ _EVENTS_VALUES = (
     ") AS events(u, i, v))"
 )
 
-_SCHEMA_EXAMPLE_QUERIES = (
-    f"SELECT * FROM recommender.main.recommend_all({_EVENTS_VALUES}, "
-    "user := 'u', item := 'i', value := 'v', n := 3) ORDER BY user, rank;\n"
-    f"SELECT * FROM recommender.main.similar_items({_EVENTS_VALUES}, "
-    "user := 'u', item := 'i', value := 'v', n := 2) ORDER BY item, rank;\n"
-    f"SELECT * FROM recommender.main.recommend_for({_EVENTS_VALUES}, "
-    "user := 'u', item := 'i', value := 'v', target_user := 'u3', n := 2) ORDER BY rank;"
+_SCHEMA_EXAMPLE_QUERIES = json.dumps(
+    [
+        {
+            "description": "Top-3 recommended items per user (recommend_all), ranked best-first.",
+            "sql": (
+                f"SELECT user, item, rank FROM recommender.main.recommend_all({_EVENTS_VALUES}, "
+                "user := 'u', item := 'i', value := 'v', n := 3) ORDER BY user, rank"
+            ),
+        },
+        {
+            "description": "Top-2 nearest-neighbour items per item (similar_items) by ALS cosine.",
+            "sql": (
+                f"SELECT item, similar_item, rank FROM recommender.main.similar_items({_EVENTS_VALUES}, "
+                "user := 'u', item := 'i', value := 'v', n := 2) ORDER BY item, rank"
+            ),
+        },
+        {
+            "description": "Top-2 recommendations for one target user (recommend_for), ranked best-first.",
+            "sql": (
+                f"SELECT item, rank FROM recommender.main.recommend_for({_EVENTS_VALUES}, "
+                "user := 'u', item := 'i', value := 'v', target_user := 'u3', n := 2) ORDER BY rank"
+            ),
+        },
+    ]
 )
 
 # Agent-suitability suite (VGI152/VGI920). Each prompt fully specifies its own
@@ -202,16 +219,17 @@ _AGENT_TEST_TASKS = json.dumps(
             "unordered": True,
         },
         {
-            "name": "discover_similarity_function",
+            "name": "browse_sample_interactions",
             "prompt": (
-                "This worker publishes a browsable discovery view that lists its recommendation "
-                "functions, each tagged with a category. Using that view, find the name of the "
-                "function whose category is item-to-item similarity. Return just the function name."
+                "This worker ships a small built-in sample interaction dataset as a browsable "
+                "relation. Using that dataset, report how many interactions each user has. "
+                "Return the user id alongside the interaction count."
             ),
             "reference_sql": (
-                "SELECT function_name FROM recommender.main.recommender_functions WHERE category = 'item-similarity'"
+                'SELECT "user", count(*) AS interactions '
+                "FROM recommender.main.sample_interactions GROUP BY 1 ORDER BY 1"
             ),
-            "success_criteria": "Returns exactly one row whose function name is similar_items.",
+            "success_criteria": "Returns one row per user u1..u4 with counts 3, 3, 2, 2 respectively.",
             "ignore_column_names": True,
             "unordered": True,
         },
@@ -248,10 +266,11 @@ _SCHEMA_CATEGORIES = json.dumps(
             ),
         },
         {
-            "name": "discovery",
+            "name": "sample-data",
             "description": (
-                "Browsable registry/metadata objects that describe the worker's own "
-                "recommendation functions (their arguments and result columns)."
+                "A small built-in (user, item, value) interaction dataset, browsable as "
+                "a view, that shows the expected input shape and can be fed straight into "
+                "the recommendation functions."
             ),
         },
     ]
@@ -269,104 +288,130 @@ _SCHEMA_TAGS = {
     "topic": "collaborative-filtering",
 }
 
-# A browsable, credential-free registry of the worker's table functions (VGI146).
-# Backed by an inline VALUES scan so it needs no network, table, or model fit --
-# an agent can query it to discover what functions exist, what they return, and
-# which named arguments they take before ever constructing a call. Kept in lock-
-# step with tables.py by hand (three rows, one per TABLE_FUNCTION).
-_FUNCTIONS_VIEW_DEFINITION = (
-    "SELECT function_name, category, purpose, key_arguments, output_columns FROM (VALUES "
-    "('recommend_all', 'user-recommendations', "
-    "'Top-N recommended items for every user in the interaction relation.', "
-    "'user, item, value, n, factors', 'user, item, score, rank'), "
-    "('recommend_for', 'user-recommendations', "
-    "'Top-N recommended items for one target user (named target_user argument).', "
-    "'user, item, value, target_user, n, factors', 'item, score, rank'), "
-    "('similar_items', 'item-similarity', "
-    "'Top-N most similar items per item by cosine of the ALS item factors.', "
-    "'user, item, value, n, factors', 'item, similar_item, similarity, rank')"
-    ") AS t(function_name, category, purpose, key_arguments, output_columns)"
+# A small, browsable built-in interaction dataset (VGI146): a plain data view an
+# agent can SELECT from to learn the (user, item, value) input shape before ever
+# calling a function -- and feed straight into recommend_all / similar_items /
+# recommend_for. Its columns are named exactly user/item/value so it works with the
+# functions' DEFAULT role arguments. This is sample DATA, not a registry of the
+# worker's own functions (which VGI327 forbids). The rows are the planted signal:
+# u1/u2 saw {A,B,C}; u3/u4 saw only {A,B}, so C is the novel recommendation for
+# u3/u4 and A/B are mutual nearest neighbours.
+_SAMPLE_INTERACTIONS_DEFINITION = (
+    'SELECT "user", "item", "value" FROM (VALUES '
+    "('u1','A',1.0),('u1','B',1.0),('u1','C',1.0),"
+    "('u2','A',1.0),('u2','B',1.0),('u2','C',1.0),"
+    "('u3','A',1.0),('u3','B',1.0),"
+    "('u4','A',1.0),('u4','B',1.0)"
+    ') AS t("user", "item", "value")'
 )
 
-_FUNCTIONS_VIEW_DOC_LLM = (
-    "# recommender_functions\n\n"
-    "A browsable registry of the three collaborative-filtering table functions this "
-    "worker exposes, one row per function. Query it first to discover what is "
-    "available: each row gives the function name, its category "
-    "(user-recommendations vs item-similarity), a one-line purpose, the comma-"
-    "separated list of named arguments it accepts, and the columns it returns. It is "
-    "a static VALUES-backed view -- reading it fits no model and touches no network -- "
-    "so it is safe to scan freely while planning a query.\n\n"
-    "## When to use\n"
-    "Use it to answer 'which function should I call and what does it return?' before "
-    "constructing a `recommend_all` / `recommend_for` / `similar_items` call. The "
-    "`key_arguments` and `output_columns` strings mirror the per-function "
-    "documentation and the actual result schemas."
+_SAMPLE_INTERACTIONS_DOC_LLM = (
+    "# sample_interactions\n\n"
+    "A small, static, built-in interaction dataset -- 10 `(user, item, value)` rows -- "
+    "exposed as a browsable view so you can see the exact input shape the recommendation "
+    "functions expect without supplying your own data. `SELECT` from it freely (it fits "
+    "no model and touches no network), then feed it straight into `recommend_all`, "
+    "`similar_items`, or `recommend_for` as their interaction relation. Its columns are "
+    "named `user`, `item`, and `value`, which are exactly the functions' default role "
+    "arguments, so `recommend_all((SELECT * FROM recommender.main.sample_interactions))` "
+    "works with no role arguments at all.\n\n"
+    "## Contents\n"
+    "A deliberately rigged signal: users `u1`/`u2` interacted with items `A`, `B`, and "
+    "`C`; `u3`/`u4` with only `A` and `B`. Collaborative filtering therefore recommends "
+    "the unseen item `C` to `u3` and `u4`, and treats `A` and `B` as each other's nearest "
+    "neighbours -- handy for a first, self-contained end-to-end call."
 )
 
-_FUNCTIONS_VIEW_DOC_MD = (
-    "## recommender_functions\n\n"
-    "A discovery view listing the worker's collaborative-filtering table functions, "
-    "one row per function. Each row records the function name, its category, a short "
-    "purpose, the named arguments it takes, and the columns it returns. Backed by an "
-    "inline `VALUES` scan, so it reads instantly with no model fit and no network.\n\n"
+_SAMPLE_INTERACTIONS_DOC_MD = (
+    "## sample_interactions\n\n"
+    "A built-in, static `(user, item, value)` interaction dataset (10 rows) exposed as a "
+    "browsable view. Use it to learn the input shape the recommendation functions expect "
+    "and as a ready-made relation to try them on -- no data of your own required.\n\n"
     "### Columns\n\n"
-    "- `function_name` -- the callable name (`recommend_all`, `recommend_for`, "
-    "`similar_items`).\n"
-    "- `category` -- `user-recommendations` or `item-similarity`.\n"
-    "- `purpose` -- a one-line summary of what the function computes.\n"
-    "- `key_arguments` -- the comma-separated named arguments the function accepts.\n"
-    "- `output_columns` -- the comma-separated columns the function returns."
+    "- `user` -- interacting user id (`VARCHAR`).\n"
+    "- `item` -- interacted item id (`VARCHAR`).\n"
+    "- `value` -- interaction strength / confidence (`DOUBLE`, all `1.0` here).\n\n"
+    "### Notes\n\n"
+    "The column names match the functions' default role arguments, so the whole view can "
+    "be passed as the interaction relation with no `user :=` / `item :=` / `value :=` "
+    "arguments. The rows carry a planted signal: `C` is the novel recommendation for "
+    "`u3`/`u4`, and `A`/`B` are mutual nearest neighbours."
 )
 
-_RECOMMENDER_FUNCTIONS_VIEW = View(
-    name="recommender_functions",
-    definition=_FUNCTIONS_VIEW_DEFINITION,
-    comment="Discovery registry of the worker's recommendation table functions (one row per function).",
+_SAMPLE_INTERACTIONS_VIEW = View(
+    name="sample_interactions",
+    definition=_SAMPLE_INTERACTIONS_DEFINITION,
+    comment="Built-in sample (user, item, value) interaction dataset to browse and feed to the functions.",
     column_comments={
-        "function_name": "Name of the table function (recommend_all, recommend_for, similar_items).",
-        "category": "Function grouping: 'user-recommendations' or 'item-similarity'.",
-        "purpose": "One-line summary of what the function computes.",
-        "key_arguments": "Comma-separated named arguments the function accepts.",
-        "output_columns": "Comma-separated columns the function returns.",
+        "user": "Interacting user id (original, as supplied).",
+        "item": "Interacted item id (original, as supplied).",
+        "value": "Interaction strength / confidence (all 1.0 in this sample).",
     },
     tags={
-        "vgi.title": "Recommendation Functions Registry",
-        "vgi.category": "discovery",
+        "vgi.title": "Sample Interaction Dataset",
+        "vgi.category": "sample-data",
         # VGI123 classifying tags use BARE keys (not vgi.-namespaced).
         "domain": "machine-learning",
         "topic": "collaborative-filtering",
-        "vgi.doc_llm": _FUNCTIONS_VIEW_DOC_LLM,
-        "vgi.doc_md": _FUNCTIONS_VIEW_DOC_MD,
+        "vgi.doc_llm": _SAMPLE_INTERACTIONS_DOC_LLM,
+        "vgi.doc_md": _SAMPLE_INTERACTIONS_DOC_MD,
         "vgi.keywords": json.dumps(
             [
-                "functions",
-                "registry",
-                "discovery",
-                "catalog",
-                "recommend_all",
-                "recommend_for",
-                "similar_items",
-                "capabilities",
+                "sample data",
+                "example dataset",
+                "interactions",
+                "user item value",
+                "getting started",
+                "browsable",
+                "demo",
+                "collaborative filtering",
             ]
         ),
         "vgi.example_queries": json.dumps(
             [
                 {
-                    "description": "List the per-user recommendation functions and what each returns.",
+                    "description": "Count how many interactions each user has in the sample dataset.",
                     "sql": (
-                        "SELECT function_name, output_columns "
-                        "FROM recommender.main.recommender_functions "
-                        "WHERE category = 'user-recommendations' ORDER BY function_name"
+                        'SELECT "user", count(*) AS interactions '
+                        "FROM recommender.main.sample_interactions GROUP BY 1 ORDER BY 1"
                     ),
                 },
                 {
-                    "description": "Discover the named arguments accepted by the similar_items function.",
+                    "description": "Feed the sample dataset straight into recommend_all (default role args).",
                     "sql": (
-                        "SELECT key_arguments "
-                        "FROM recommender.main.recommender_functions "
-                        "WHERE function_name = 'similar_items'"
+                        'SELECT "user", item, rank FROM recommender.main.recommend_all('
+                        "(SELECT * FROM recommender.main.sample_interactions), n := 3) "
+                        "ORDER BY 1, rank"
                     ),
+                },
+            ]
+        ),
+        "vgi.executable_examples": json.dumps(
+            [
+                {
+                    "description": "Count interactions per user in the built-in sample dataset.",
+                    "sql": (
+                        'SELECT "user", count(*) AS interactions '
+                        "FROM recommender.main.sample_interactions GROUP BY 1 ORDER BY 1"
+                    ),
+                    "expected_result": [
+                        {"user": "u1", "interactions": 3},
+                        {"user": "u2", "interactions": 3},
+                        {"user": "u3", "interactions": 2},
+                        {"user": "u4", "interactions": 2},
+                    ],
+                },
+                {
+                    "description": "Recommend the novel item C to users u3 and u4 from the sample dataset.",
+                    "sql": (
+                        'SELECT "user", item FROM recommender.main.recommend_all('
+                        "(SELECT * FROM recommender.main.sample_interactions), n := 1) "
+                        "WHERE \"user\" IN ('u3', 'u4') ORDER BY 1"
+                    ),
+                    "expected_result": [
+                        {"user": "u3", "item": "C"},
+                        {"user": "u4", "item": "C"},
+                    ],
                 },
             ]
         ),
@@ -384,7 +429,7 @@ _RECOMMENDER_CATALOG = Catalog(
             name="main",
             comment="Recommendation table functions: recommend_all, similar_items, recommend_for.",
             tags=_SCHEMA_TAGS,
-            views=[_RECOMMENDER_FUNCTIONS_VIEW],
+            views=[_SAMPLE_INTERACTIONS_VIEW],
             functions=list(_FUNCTIONS),
         ),
     ],

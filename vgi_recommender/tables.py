@@ -260,7 +260,7 @@ class RecommendAll(SinkBuffer[RecommendAllArgs, DrainState]):
                     },
                 ]
             ),
-            "vgi.executable_examples": json.dumps(
+            "vgi.example_queries": json.dumps(
                 [
                     {
                         "description": "Top-3 recommendations per user over an inline interaction relation.",
@@ -422,7 +422,7 @@ class SimilarItems(SinkBuffer[SimilarItemsArgs, DrainState]):
                     },
                 ]
             ),
-            "vgi.executable_examples": json.dumps(
+            "vgi.example_queries": json.dumps(
                 [
                     {
                         "description": "Top-2 most similar items for every item in an inline relation.",
@@ -571,7 +571,7 @@ class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
                     {"name": "rank", "type": "INTEGER", "description": "Rank within the recommendations (1 = best)."},
                 ]
             ),
-            "vgi.executable_examples": json.dumps(
+            "vgi.example_queries": json.dumps(
                 [
                     {
                         "description": "Top-2 recommendations for a single target user (u3).",
