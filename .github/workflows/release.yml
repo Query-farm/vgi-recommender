@@ -28,6 +28,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # attach assets to the Release
+    env:
+      UV_PYTHON: "3.13"
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
