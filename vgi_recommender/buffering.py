@@ -67,8 +67,7 @@ def result_to_ipc(batch: pa.RecordBatch) -> bytes:
         The Arrow IPC stream bytes, stored verbatim in :class:`DrainState`.
     """
     sink = pa.BufferOutputStream()
-    # pyarrow's stubs leave new_stream untyped; the call is sound.
-    with pa.ipc.new_stream(sink, batch.schema) as writer:  # type: ignore[no-untyped-call]
+    with pa.ipc.new_stream(sink, batch.schema) as writer:
         writer.write_batch(batch)
     result: bytes = sink.getvalue().to_pybytes()
     return result
@@ -83,8 +82,7 @@ def ipc_to_table(value: bytes) -> pa.Table:
     Returns:
         The materialized result as a single Arrow table.
     """
-    # pyarrow's stubs leave open_stream untyped; the call is sound.
-    reader = pa.ipc.open_stream(pa.BufferReader(value))  # type: ignore[no-untyped-call]
+    reader = pa.ipc.open_stream(pa.BufferReader(value))
     table: pa.Table = reader.read_all()
     return table
 
@@ -92,8 +90,7 @@ def ipc_to_table(value: bytes) -> pa.Table:
 def serialize_batch(batch: pa.RecordBatch) -> bytes:
     """Serialize one RecordBatch to a self-describing Arrow IPC stream."""
     sink = pa.BufferOutputStream()
-    # pyarrow's stubs leave new_stream untyped; the call is sound.
-    with pa.ipc.new_stream(sink, batch.schema) as writer:  # type: ignore[no-untyped-call]
+    with pa.ipc.new_stream(sink, batch.schema) as writer:
         writer.write_batch(batch)
     result: bytes = sink.getvalue().to_pybytes()
     return result
@@ -101,15 +98,14 @@ def serialize_batch(batch: pa.RecordBatch) -> bytes:
 
 def deserialize_batches(value: bytes) -> list[pa.RecordBatch]:
     """Inverse of :func:`serialize_batch` for one stored blob."""
-    # pyarrow's stubs leave open_stream untyped; the call is sound.
-    reader = pa.ipc.open_stream(pa.BufferReader(value))  # type: ignore[no-untyped-call]
+    reader = pa.ipc.open_stream(pa.BufferReader(value))
     batches: list[pa.RecordBatch] = reader.read_all().to_batches()
     return batches
 
 
 def input_schema_of(params: Any) -> pa.Schema:
     """Input schema from a process/finalize params object."""
-    schema = params.init_call.bind_call.input_schema
+    schema: pa.Schema | None = params.init_call.bind_call.input_schema
     assert schema is not None
     return schema
 

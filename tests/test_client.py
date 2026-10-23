@@ -33,6 +33,7 @@ def _run(client: Client, name: str, table: pa.Table, **named: Any) -> pa.Table:
     batches = list(
         client.table_buffering_function(
             function_name=name,
+            schema_path=["main"],
             input=iter(table.to_batches()),
             arguments=Arguments(named={k: pa.scalar(v) for k, v in named.items()}),
         )

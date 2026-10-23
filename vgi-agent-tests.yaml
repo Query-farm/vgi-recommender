@@ -1,0 +1,24 @@
+# Private graders for `vgi-lint simulate` (VGI416). The worker publishes only
+# task names and prompts in vgi.agent_test_tasks; these canonical solutions and
+# grading options stay in the repo and are merged by task name.
+tasks:
+  - name: recommend_for_single_user
+    reference_sql: "SELECT item FROM recommender.main.recommend_for((SELECT * FROM (VALUES ('u1','A',1.0),('u1','B',1.0),('u1','C',1.0),('u2','A',1.0),('u2','B',1.0),('u2','C',1.0),('u3','A',1.0),('u3','B',1.0),('u4','A',1.0),('u4','B',1.0)) AS events(u, i, v)), user := 'u', item := 'i', value := 'v', target_user := 'u3', n := 1)"
+    success_criteria: "Returns exactly one row whose item id is C."
+    ignore_column_names: true
+    unordered: true
+  - name: most_similar_item
+    reference_sql: "SELECT similar_item FROM recommender.main.similar_items((SELECT * FROM (VALUES ('u1','A',1.0),('u1','B',1.0),('u1','C',1.0),('u2','A',1.0),('u2','B',1.0),('u2','C',1.0),('u3','A',1.0),('u3','B',1.0),('u4','A',1.0),('u4','B',1.0)) AS events(u, i, v)), user := 'u', item := 'i', value := 'v', n := 1) WHERE item = 'A'"
+    success_criteria: "Returns exactly one row whose similar item id is B."
+    ignore_column_names: true
+    unordered: true
+  - name: top_item_per_user
+    reference_sql: "SELECT user, item FROM recommender.main.recommend_all((SELECT * FROM (VALUES ('u1','A',1.0),('u1','B',1.0),('u1','C',1.0),('u2','A',1.0),('u2','B',1.0),('u2','C',1.0),('u3','A',1.0),('u3','B',1.0),('u4','A',1.0),('u4','B',1.0)) AS events(u, i, v)), user := 'u', item := 'i', value := 'v', n := 1) ORDER BY user"
+    success_criteria: "Returns (u3, C) and (u4, C); u1/u2 have no new items to recommend."
+    ignore_column_names: true
+    unordered: true
+  - name: browse_sample_interactions
+    reference_sql: "SELECT \"user\", count(*) AS interactions FROM recommender.main.sample_interactions GROUP BY 1 ORDER BY 1"
+    success_criteria: "Returns one row per user u1..u4 with counts 3, 3, 2, 2 respectively."
+    ignore_column_names: true
+    unordered: true

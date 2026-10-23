@@ -162,7 +162,9 @@ _SCHEMA_EXAMPLE_QUERIES = json.dumps(
 
 # Agent-suitability suite (VGI152/VGI920). Each prompt fully specifies its own
 # interaction data (there is no pre-existing table) so an analyst who has only
-# read the catalog metadata can reproduce it; the grader-only reference_sql uses
+# read the catalog metadata can reproduce it. VGI416: the grader-only fields
+# (reference_sql, success_criteria, ignore_column_names, unordered) live in the
+# private vgi-agent-tests.yaml sidecar at the repo root. The references use
 # the planted-signal relation (u1/u2 saw {A,B,C}; u3/u4 saw {A,B}), which makes C
 # the novel recommendation for u3/u4 and A/B mutual nearest neighbours. ALS is
 # seeded (pinned random_state, single-threaded BLAS) so these references are
@@ -178,13 +180,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "u4 with A and B. Recommend the single best new item for user u3 -- one "
                 "they have not already interacted with. Return just the item id."
             ),
-            "reference_sql": (
-                f"SELECT item FROM recommender.main.recommend_for({_EVENTS_VALUES}, "
-                "user := 'u', item := 'i', value := 'v', target_user := 'u3', n := 1)"
-            ),
-            "success_criteria": "Returns exactly one row whose item id is C.",
-            "ignore_column_names": True,
-            "unordered": True,
         },
         {
             "name": "most_similar_item",
@@ -194,13 +189,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "A and B, find the item most similar to item A (excluding A itself). "
                 "Return the similar item's id."
             ),
-            "reference_sql": (
-                f"SELECT similar_item FROM recommender.main.similar_items({_EVENTS_VALUES}, "
-                "user := 'u', item := 'i', value := 'v', n := 1) WHERE item = 'A'"
-            ),
-            "success_criteria": "Returns exactly one row whose similar item id is B.",
-            "ignore_column_names": True,
-            "unordered": True,
         },
         {
             "name": "top_item_per_user",
@@ -210,13 +198,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "A and B, list the single top recommended new item for every user that has "
                 "one, returning the user id alongside the recommended item id."
             ),
-            "reference_sql": (
-                f"SELECT user, item FROM recommender.main.recommend_all({_EVENTS_VALUES}, "
-                "user := 'u', item := 'i', value := 'v', n := 1) ORDER BY user"
-            ),
-            "success_criteria": "Returns (u3, C) and (u4, C); u1/u2 have no new items to recommend.",
-            "ignore_column_names": True,
-            "unordered": True,
         },
         {
             "name": "browse_sample_interactions",
@@ -225,13 +206,6 @@ _AGENT_TEST_TASKS = json.dumps(
                 "relation. Using that dataset, report how many interactions each user has. "
                 "Return the user id alongside the interaction count."
             ),
-            "reference_sql": (
-                'SELECT "user", count(*) AS interactions '
-                "FROM recommender.main.sample_interactions GROUP BY 1 ORDER BY 1"
-            ),
-            "success_criteria": "Returns one row per user u1..u4 with counts 3, 3, 2, 2 respectively.",
-            "ignore_column_names": True,
-            "unordered": True,
         },
     ]
 )
@@ -426,7 +400,7 @@ _RECOMMENDER_CATALOG = Catalog(
     source_url="https://github.com/Query-farm/vgi-recommender",
     schemas=[
         Schema(
-            name="main",
+            path=["main"],
             comment="Recommendation table functions: recommend_all, similar_items, recommend_for.",
             tags=_SCHEMA_TAGS,
             views=[_SAMPLE_INTERACTIONS_VIEW],
