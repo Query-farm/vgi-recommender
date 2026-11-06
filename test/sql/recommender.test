@@ -8,7 +8,7 @@ statement ok
 LOAD vgi;
 
 statement ok
-ATTACH 'recommender' AS recommender (TYPE vgi, LOCATION '${VGI_RECOMMENDER_WORKER}');
+ATTACH 'recommender' AS recommender (TYPE vgi, LOCATION '{VGI_RECOMMENDER_WORKER}');
 
 # Planted-signal interactions: users u1/u2 bought A,B,C; u3/u4 bought only A,B
 # (so they should get C recommended); u5 only touched the isolated item D.
