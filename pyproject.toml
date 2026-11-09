@@ -1,6 +1,6 @@
 [project]
 name = "vgi-recommender"
-version = "0.2.0"
+version = "0.3.0"
 description = "Collaborative-filtering recommendations (implicit-feedback ALS) for DuckDB via VGI"
 readme = "README.md"
 keywords = [
