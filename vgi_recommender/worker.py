@@ -211,7 +211,8 @@ _AGENT_TEST_TASKS = json.dumps(
 )
 
 _CATALOG_TAGS = {
-    "vgi.title": "Collaborative-Filtering Recommendations",
+    "vgi.title": "Item Recommender",
+    "vgi.subtitle": "Recommend items and find similar items from user interaction data.",
     "vgi.keywords": _SCHEMA_KEYWORDS,
     "vgi.doc_llm": _CATALOG_DESCRIPTION_LLM,
     "vgi.doc_md": _CATALOG_DESCRIPTION_MD,
@@ -251,7 +252,7 @@ _SCHEMA_CATEGORIES = json.dumps(
 )
 
 _SCHEMA_TAGS = {
-    "vgi.title": "Recommender Functions (main)",
+    "vgi.title": "Recommendation Functions",
     "vgi.keywords": _SCHEMA_KEYWORDS,
     "vgi.doc_llm": _SCHEMA_DESCRIPTION_LLM,
     "vgi.doc_md": _SCHEMA_DESCRIPTION_MD,
