@@ -16,7 +16,7 @@ Alternating Least Squares (ALS).
 
 ```sql
 INSTALL vgi FROM community; LOAD vgi;
-ATTACH 'recommender' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-recommender@v0.3.0 vgi-recommender');
+ATTACH 'recommender' (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-recommender@v0.4.0 vgi-recommender');
 
 -- Top-10 recommended items per user (already-seen items excluded)
 SELECT * FROM recommender.recommend_all((SELECT u, i, v FROM events),
@@ -43,7 +43,7 @@ The worker isn't on PyPI; [uv](https://docs.astral.sh/uv/) runs it straight from
 INSTALL vgi FROM community;
 LOAD vgi;
 
-ATTACH 'recommender' AS recommender (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-recommender@v0.3.0 vgi-recommender');
+ATTACH 'recommender' AS recommender (TYPE vgi, LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-recommender@v0.4.0 vgi-recommender');
 
 -- Top-3 recommended items per user (recommend_all), ranked best-first.
 SELECT user, item, rank FROM recommender.main.recommend_all((SELECT * FROM (VALUES ('u1','A',1.0),('u1','B',1.0),('u1','C',1.0),('u2','A',1.0),('u2','B',1.0),('u2','C',1.0),('u3','A',1.0),('u3','B',1.0),('u4','A',1.0),('u4','B',1.0)) AS events(u, i, v)), user := 'u', item := 'i', value := 'v', n := 3) ORDER BY user, rank;
@@ -52,14 +52,14 @@ SELECT user, item, rank FROM recommender.main.recommend_all((SELECT * FROM (VALU
 SELECT item, similar_item, rank FROM recommender.main.similar_items((SELECT * FROM (VALUES ('u1','A',1.0),('u1','B',1.0),('u1','C',1.0),('u2','A',1.0),('u2','B',1.0),('u2','C',1.0),('u3','A',1.0),('u3','B',1.0),('u4','A',1.0),('u4','B',1.0)) AS events(u, i, v)), user := 'u', item := 'i', value := 'v', n := 2) ORDER BY item, rank;
 ```
 
-Change `@v0.3.0` to move to a newer release.
+Change `@v0.4.0` to move to a newer release.
 
 ### Other ways to run it
 
 - **Docker** (the image bundles the worker and its dependencies):
 
   ```sql
-  ATTACH 'recommender' AS recommender (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-recommender:0.3.0');
+  ATTACH 'recommender' AS recommender (TYPE vgi, LOCATION 'docker://ghcr.io/query-farm/vgi-recommender:0.4.0');
   ```
 
 - **From a local checkout** (`git clone https://github.com/Query-farm/vgi-recommender`), point `LOCATION` at `uv run --project /path/to/vgi-recommender vgi-recommender`.
