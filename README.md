@@ -171,3 +171,7 @@ Written by [Query.Farm](https://query.farm).
 
 Copyright 2026 Query Farm LLC - https://query.farm
 
+
+## Executed notebook
+
+[Audit recommendation slates and item exposure](notebooks/README.md) with a portable Haybarn walkthrough and a controlled slate-size experiment.
