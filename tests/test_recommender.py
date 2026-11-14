@@ -86,6 +86,24 @@ def test_similar_items_structure_and_excludes_self() -> None:
         assert all(a >= b - 1e-9 for a, b in zip(sims, sims[1:], strict=False))
 
 
+def test_similar_items_n_larger_than_catalog_has_no_padding() -> None:
+    # Regression: with n >= #items, implicit pads similar_items() up to N with
+    # repeated index 0 at similarity 0.0, which surfaced as duplicate bogus
+    # neighbours (e.g. B -> A at ranks 3..10). Each item must list every OTHER
+    # item exactly once and nothing more.
+    df = pd.DataFrame(
+        {
+            "user": ["u1", "u1", "u1", "u2", "u2", "u2", "u3", "u3", "u4", "u4"],
+            "item": ["A", "B", "C", "A", "B", "C", "A", "B", "A", "B"],
+        }
+    )
+    out = recommender.similar_items(df, user="user", item="item", n=10)
+    by_item: dict[str, list[str]] = {}
+    for it, s in zip(out["item"], out["similar_item"], strict=True):
+        by_item.setdefault(it, []).append(s)
+    assert {it: sorted(v) for it, v in by_item.items()} == {"A": ["B", "C"], "B": ["A", "C"], "C": ["A", "B"]}
+
+
 def test_similar_items_planted_A_and_B_are_neighbours() -> None:
     # A and B are co-purchased by exactly the same users -> top neighbours.
     df = planted_frame()

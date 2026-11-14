@@ -96,7 +96,10 @@ harness, which re-serializes state between every tick) expose it. See
    fewer than N novel items remain it fills the tail with already-liked items at
    score `-3.4e38` (`-inf`). We drop non-finite scores, which is also how
    already-seen exclusion is enforced. `similar_items` always includes the item
-   itself at similarity 1.0 — we request `N+1` and skip the self-match.
+   itself at similarity 1.0 — we request `N+1` and skip the self-match. `N` is
+   capped at the item count: asked for more neighbours than exist, implicit pads
+   the tail with repeated index 0 at similarity `0.0` (finite, so the `-inf`
+   filter misses it) — we cap `N` and de-duplicate.
 4. **`value` is confidence, and its column may be absent.** `value` has a default
    arg name (`'value'`); if that column isn't in the relation we fall back to
    all-ones implicit feedback rather than erroring. A *present* but non-numeric

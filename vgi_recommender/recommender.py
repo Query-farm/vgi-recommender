@@ -305,18 +305,24 @@ def similar_items(
     out_sim: list[float] = []
     out_rank: list[int] = []
 
+    # Ask for N+1 (implicit includes the item itself at similarity 1.0; it is
+    # dropped below), capped at the item count: when N exceeds the number of
+    # items, ``implicit`` pads the result with repeated index 0 at similarity
+    # 0.0, which would surface as bogus duplicate neighbours.
+    want = min(n + 1, len(fitted.item_ids))
     for it_idx, it_id in enumerate(fitted.item_ids):
-        # Ask for N+1: implicit includes the item itself (similarity 1.0); drop it.
-        ids, sims = fitted.model.similar_items(it_idx, N=n + 1)
+        ids, sims = fitted.model.similar_items(it_idx, N=want)
         rank = 0
+        emitted: set[int] = set()
         for other_idx, sim in zip(ids.tolist(), sims.tolist(), strict=False):
-            if other_idx == it_idx:
+            if other_idx == it_idx or other_idx in emitted:
                 continue
             if not np.isfinite(sim):
                 continue
             rank += 1
             if rank > n:
                 break
+            emitted.add(other_idx)
             out_item.append(it_id)
             out_similar.append(fitted.item_ids[other_idx])
             out_sim.append(float(sim))

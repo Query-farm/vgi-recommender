@@ -120,6 +120,28 @@ in queries, results are stable across runs.
 | `similar_items(rel, user, item, value, n, factors)` | `(item, similar_item, similarity, rank)` — top-N per item |
 | `recommend_for(rel, user, item, value, target_user, n, factors)` | `(item, score, rank)` — top-N for one user |
 
+### Combining the functions
+
+The functions share one input shape, so their outputs join naturally. This
+explains each user's top recommendation with the item they already interacted
+with that is most similar to it ("recommended *Matrix* because you watched
+*Dune*"):
+
+```sql
+WITH recs AS (SELECT user, item FROM recommender.recommend_all((SELECT u, i, v FROM events),
+                                                               user := 'u', item := 'i', value := 'v', n := 1)),
+     sims AS (SELECT item, similar_item, similarity FROM recommender.similar_items((SELECT u, i, v FROM events),
+                                                               user := 'u', item := 'i', value := 'v', n := 10))
+SELECT r.user, r.item AS recommended,
+       arg_max(s.similar_item, s.similarity) AS because_of,
+       max(s.similarity) AS similarity
+FROM recs r
+JOIN events e ON e.u = r.user
+JOIN sims s ON s.item = r.item AND s.similar_item = e.i
+GROUP BY r.user, r.item
+ORDER BY r.user;
+```
+
 ## Robustness
 
 Missing `user`/`item` columns, an empty relation, or a non-numeric `value`

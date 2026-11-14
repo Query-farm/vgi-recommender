@@ -19,7 +19,13 @@ import sys
 from vgi import Worker
 from vgi.catalog import Catalog, Schema, View
 
-from vgi_recommender.tables import TABLE_FUNCTIONS
+from vgi_recommender.tables import (
+    EXPLAIN_RECOMMENDATIONS_DESCRIPTION,
+    EXPLAIN_RECOMMENDATIONS_SQL,
+    HYBRID_SUPPORT_DESCRIPTION,
+    HYBRID_SUPPORT_SQL,
+    TABLE_FUNCTIONS,
+)
 
 _FUNCTIONS: list[type] = [*TABLE_FUNCTIONS]
 
@@ -134,6 +140,22 @@ _EVENTS_VALUES = (
     ") AS events(u, i, v))"
 )
 
+# sample_interactions + recommend_all: feed the built-in view to recommend_all,
+# then join each recommendation back to the same view to report how many users
+# already interacted with the recommended item (its current audience).
+_RECOMMENDATION_AUDIENCE_SQL = (
+    'WITH recs AS (SELECT "user", item FROM recommender.main.recommend_all('
+    "(SELECT * FROM recommender.main.sample_interactions), n := 1)) "
+    'SELECT r."user", r.item, count(DISTINCT s."user") AS users_already_interacted '
+    "FROM recs r JOIN recommender.main.sample_interactions s ON s.item = r.item "
+    'GROUP BY r."user", r.item ORDER BY r."user"'
+)
+_RECOMMENDATION_AUDIENCE_DESCRIPTION = (
+    "Top recommendation per user from the built-in sample dataset (recommend_all over "
+    "sample_interactions), joined back to the dataset to count how many users already "
+    "interacted with the recommended item: u3 and u4 both get C, which 2 users already have."
+)
+
 _SCHEMA_EXAMPLE_QUERIES = json.dumps(
     [
         {
@@ -157,6 +179,9 @@ _SCHEMA_EXAMPLE_QUERIES = json.dumps(
                 "user := 'u', item := 'i', value := 'v', target_user := 'u3', n := 2) ORDER BY rank"
             ),
         },
+        {"description": EXPLAIN_RECOMMENDATIONS_DESCRIPTION, "sql": EXPLAIN_RECOMMENDATIONS_SQL},
+        {"description": HYBRID_SUPPORT_DESCRIPTION, "sql": HYBRID_SUPPORT_SQL},
+        {"description": _RECOMMENDATION_AUDIENCE_DESCRIPTION, "sql": _RECOMMENDATION_AUDIENCE_SQL},
     ]
 )
 
@@ -205,6 +230,18 @@ _AGENT_TEST_TASKS = json.dumps(
                 "This worker ships a small built-in sample interaction dataset as a browsable "
                 "relation. Using that dataset, report how many interactions each user has. "
                 "Return the user id alongside the interaction count."
+            ),
+        },
+        {
+            "name": "explain_top_recommendation",
+            "prompt": (
+                "There is no pre-existing table. A shop's purchase history (customer, product), "
+                "one row per purchase: c1 bought kettle, teapot and tea; c2 bought kettle, teapot "
+                "and tea; c3 bought kettle and tea; c4 bought grinder, coffee and mug; c5 bought "
+                "grinder and coffee; c6 bought coffee and mug; c7 bought tea and mug. Find customer "
+                "c7's single top recommended new product, and explain it with the product c7 "
+                "already bought whose item-item similarity to that recommendation is highest. "
+                "Return two columns: the recommended product and the explaining product."
             ),
         },
     ]
@@ -359,6 +396,7 @@ _SAMPLE_INTERACTIONS_VIEW = View(
                         "ORDER BY 1, rank"
                     ),
                 },
+                {"description": _RECOMMENDATION_AUDIENCE_DESCRIPTION, "sql": _RECOMMENDATION_AUDIENCE_SQL},
             ]
         ),
         "vgi.executable_examples": json.dumps(
@@ -386,6 +424,14 @@ _SAMPLE_INTERACTIONS_VIEW = View(
                     "expected_result": [
                         {"user": "u3", "item": "C"},
                         {"user": "u4", "item": "C"},
+                    ],
+                },
+                {
+                    "description": _RECOMMENDATION_AUDIENCE_DESCRIPTION,
+                    "sql": _RECOMMENDATION_AUDIENCE_SQL,
+                    "expected_result": [
+                        {"user": "u3", "item": "C", "users_already_interacted": 2},
+                        {"user": "u4", "item": "C", "users_already_interacted": 2},
                     ],
                 },
             ]

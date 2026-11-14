@@ -22,3 +22,8 @@ tasks:
     success_criteria: "Returns one row per user u1..u4 with counts 3, 3, 2, 2 respectively."
     ignore_column_names: true
     unordered: true
+  - name: explain_top_recommendation
+    reference_sql: "WITH buys AS (SELECT * FROM (VALUES ('c1','kettle'),('c1','teapot'),('c1','tea'),('c2','kettle'),('c2','teapot'),('c2','tea'),('c3','kettle'),('c3','tea'),('c4','grinder'),('c4','coffee'),('c4','mug'),('c5','grinder'),('c5','coffee'),('c6','coffee'),('c6','mug'),('c7','tea'),('c7','mug')) AS t(customer, product)), rec AS (SELECT item FROM recommender.main.recommend_for((SELECT customer, product FROM buys), user := 'customer', item := 'product', target_user := 'c7', n := 1)), sims AS (SELECT item, similar_item, similarity FROM recommender.main.similar_items((SELECT customer, product FROM buys), user := 'customer', item := 'product', n := 10)) SELECT r.item, arg_max(s.similar_item, s.similarity) FROM rec r JOIN buys b ON b.customer = 'c7' JOIN sims s ON s.item = r.item AND s.similar_item = b.product GROUP BY r.item"
+    success_criteria: "Returns exactly one row: recommended product kettle, explained by tea (c7's purchase most similar to kettle; mug is far less similar)."
+    ignore_column_names: true
+    unordered: true

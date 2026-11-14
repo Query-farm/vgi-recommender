@@ -155,5 +155,14 @@ LIMIT 2;
 u000	1
 u000	2
 
+# Regression: n larger than the item count must not pad similar_items with
+# repeated bogus neighbours (implicit pads to N with index 0 at similarity 0.0).
+# 3 items -> each lists exactly the 2 others: 6 rows, no duplicate pairs.
+query II
+SELECT count(*), count(DISTINCT (item, similar_item))
+FROM recommender.main.similar_items((SELECT * FROM recommender.main.sample_interactions), n := 10);
+----
+6	6
+
 statement ok
 DETACH recommender;

@@ -58,6 +58,67 @@ _EVENTS_VALUES = (
 )
 
 
+# Composed examples (one function's output feeding / joined with another's) run
+# over a richer inline relation than the planted signal above: on a 3-item matrix
+# the item similarities tie (C is equally similar to A and B), so "which watched
+# title explains this recommendation" would be ambiguous. ``plays`` is a small
+# viewing history -- (viewer, title, n_plays) -- with a sci-fi and a drama cluster
+# bridged by fay; the role names deliberately differ from the defaults.
+WATCH_HISTORY_CTE = (
+    "WITH plays AS (SELECT * FROM (VALUES "
+    "('ana','Alien',3.0),('ana','Dune',2.0),('ana','Matrix',4.0),"
+    "('ben','Alien',1.0),('ben','Dune',5.0),('ben','Matrix',2.0),('ben','Blade Runner',3.0),"
+    "('cal','Dune',2.0),('cal','Blade Runner',4.0),"
+    "('dee','Notebook',5.0),('dee','Titanic',2.0),('dee','Amelie',3.0),"
+    "('eve','Notebook',2.0),('eve','Titanic',4.0),"
+    "('fay','Titanic',3.0),('fay','Amelie',2.0),('fay','Alien',1.0)"
+    ") AS t(viewer, title, n_plays))"
+)
+
+_PLAYS_ROLES = "(SELECT viewer, title, n_plays FROM plays), user := 'viewer', item := 'title', value := 'n_plays'"
+
+# recommend_all + similar_items: explain each viewer's top recommendation by the
+# title they already watched whose ALS item factors are most similar to it.
+EXPLAIN_RECOMMENDATIONS_SQL = (
+    f"{WATCH_HISTORY_CTE}, "
+    "recs AS (SELECT user AS viewer, item AS title FROM recommender.main.recommend_all("
+    f"{_PLAYS_ROLES}, n := 1)), "
+    "sims AS (SELECT item, similar_item, similarity FROM recommender.main.similar_items("
+    f"{_PLAYS_ROLES}, n := 10)) "
+    "SELECT r.viewer, r.title AS recommended, "
+    "arg_max(s.similar_item, s.similarity) AS because_you_watched, "
+    "round(max(s.similarity), 3) AS similarity "
+    "FROM recs r JOIN plays p ON p.viewer = r.viewer "
+    "JOIN sims s ON s.item = r.title AND s.similar_item = p.title "
+    "GROUP BY r.viewer, r.title ORDER BY r.viewer"
+)
+EXPLAIN_RECOMMENDATIONS_DESCRIPTION = (
+    "Explain each viewer's top recommendation (recommend_all) with the title they already "
+    "watched that is most similar to it (similar_items), e.g. cal gets Matrix because of Dune."
+)
+
+# recommend_for + similar_items: a hybrid sanity check -- put one viewer's ALS
+# recommendations next to an item-based score (summed similarity to the titles
+# that viewer watched), so the two signals can be compared or blended.
+HYBRID_SUPPORT_SQL = (
+    f"{WATCH_HISTORY_CTE}, "
+    "recs AS (SELECT item AS title, score, rank FROM recommender.main.recommend_for("
+    f"{_PLAYS_ROLES}, target_user := 'eve', n := 3)), "
+    "sims AS (SELECT item, similar_item, similarity FROM recommender.main.similar_items("
+    f"{_PLAYS_ROLES}, n := 10)) "
+    "SELECT r.rank, r.title, round(r.score, 3) AS als_score, "
+    "round(sum(s.similarity), 3) AS item_similarity_support "
+    "FROM recs r JOIN plays p ON p.viewer = 'eve' "
+    "JOIN sims s ON s.item = r.title AND s.similar_item = p.title "
+    "GROUP BY r.rank, r.title, r.score ORDER BY r.rank"
+)
+HYBRID_SUPPORT_DESCRIPTION = (
+    "Score viewer eve's top-3 ALS recommendations (recommend_for) by their summed item-item "
+    "similarity to the titles eve watched (similar_items) -- a second, item-based signal to "
+    "compare or blend with the ALS ranking."
+)
+
+
 def _emit_next_slice(state: DrainState, out: OutputCollector, output_schema: pa.Schema) -> None:
     """Emit one bounded slice of the cursor's result, advancing the offset.
 
@@ -184,7 +245,8 @@ class RecommendAll(SinkBuffer[RecommendAllArgs, DrainState]):
                     "user := 'u', item := 'i', value := 'v', n := 3) ORDER BY user, rank"
                 ),
                 description="Top-3 recommendations per user",
-            )
+            ),
+            FunctionExample(sql=EXPLAIN_RECOMMENDATIONS_SQL, description=EXPLAIN_RECOMMENDATIONS_DESCRIPTION),
         ]
         tags = {
             "vgi.title": "Recommend Items for All Users",
@@ -277,6 +339,7 @@ class RecommendAll(SinkBuffer[RecommendAllArgs, DrainState]):
                             "WHERE user IN ('u3', 'u4') ORDER BY user"
                         ),
                     },
+                    {"description": EXPLAIN_RECOMMENDATIONS_DESCRIPTION, "sql": EXPLAIN_RECOMMENDATIONS_SQL},
                 ]
             ),
         }
@@ -346,7 +409,8 @@ class SimilarItems(SinkBuffer[SimilarItemsArgs, DrainState]):
                     "user := 'u', item := 'i', value := 'v', n := 2) ORDER BY item, rank"
                 ),
                 description="Top-2 similar items per item",
-            )
+            ),
+            FunctionExample(sql=EXPLAIN_RECOMMENDATIONS_SQL, description=EXPLAIN_RECOMMENDATIONS_DESCRIPTION),
         ]
         tags = {
             "vgi.title": "Find Similar Items by Co-Interaction",
@@ -430,7 +494,9 @@ class SimilarItems(SinkBuffer[SimilarItemsArgs, DrainState]):
                             f"SELECT item, similar_item, rank FROM recommender.main.similar_items({_EVENTS_VALUES}, "
                             "user := 'u', item := 'i', value := 'v', n := 2) ORDER BY item, rank"
                         ),
-                    }
+                    },
+                    {"description": EXPLAIN_RECOMMENDATIONS_DESCRIPTION, "sql": EXPLAIN_RECOMMENDATIONS_SQL},
+                    {"description": HYBRID_SUPPORT_DESCRIPTION, "sql": HYBRID_SUPPORT_SQL},
                 ]
             ),
         }
@@ -502,7 +568,8 @@ class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
                     "ORDER BY rank"
                 ),
                 description="Top-2 recommendations for one user",
-            )
+            ),
+            FunctionExample(sql=HYBRID_SUPPORT_SQL, description=HYBRID_SUPPORT_DESCRIPTION),
         ]
         tags = {
             "vgi.title": "Recommend Items for One User",
@@ -580,7 +647,8 @@ class RecommendFor(SinkBuffer[RecommendForArgs, DrainState]):
                             "user := 'u', item := 'i', value := 'v', target_user := 'u3', n := 2) "
                             "ORDER BY rank"
                         ),
-                    }
+                    },
+                    {"description": HYBRID_SUPPORT_DESCRIPTION, "sql": HYBRID_SUPPORT_SQL},
                 ]
             ),
         }
