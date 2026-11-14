@@ -1,0 +1,46 @@
+{
+  "query": "SELECT * FROM duckdb_databases() WHERE database_name='recommender'",
+  "captured_at": "2026-11-14T21:46:39.045236+00:00",
+  "columns": [
+    "database_name",
+    "database_oid",
+    "path",
+    "comment",
+    "tags",
+    "internal",
+    "type",
+    "readonly",
+    "encrypted",
+    "cipher",
+    "options"
+  ],
+  "rows": [
+    [
+      "recommender",
+      22592,
+      null,
+      "Collaborative-filtering recommendation worker (implicit-feedback ALS) for DuckDB via VGI.",
+      {
+        "vgi.agent_test_tasks": "[{\"name\": \"recommend_for_single_user\", \"prompt\": \"There is no pre-existing table. Consider these interactions: user u1 interacted with items A, B and C; u2 with A, B and C; u3 with A and B; u4 with A and B. Recommend the single best new item for user u3 -- one they have not already interacted with. Return just the item id.\"}, {\"name\": \"most_similar_item\", \"prompt\": \"There is no pre-existing table. Given interactions where u1 and u2 each interacted with items A, B and C, and u3 and u4 each interacted with only A and B, find the item most similar to item A (excluding A itself). Return the similar item's id.\"}, {\"name\": \"top_item_per_user\", \"prompt\": \"There is no pre-existing table. Given interactions where u1 and u2 each interacted with items A, B and C, and u3 and u4 each interacted with only A and B, list the single top recommended new item for every user that has one, returning the user id alongside the recommended item id.\"}, {\"name\": \"browse_sample_interactions\", \"prompt\": \"This worker ships a small built-in sample interaction dataset as a browsable relation. Using that dataset, report how many interactions each user has. Return the user id alongside the interaction count.\"}, {\"name\": \"explain_top_recommendation\", \"prompt\": \"There is no pre-existing table. A shop's purchase history (customer, product), one row per purchase: c1 bought kettle, teapot and tea; c2 bought kettle, teapot and tea; c3 bought kettle and tea; c4 bought grinder, coffee and mug; c5 bought grinder and coffee; c6 bought coffee and mug; c7 bought tea and mug. Find customer c7's single top recommended new product, and explain it with the product c7 already bought whose item-item similarity to that recommendation is highest. Return two columns: the recommended product and the explaining product.\"}]",
+        "vgi.author": "Query.Farm",
+        "vgi.copyright": "Copyright 2026 Query Farm LLC - https://query.farm",
+        "vgi.doc_llm": "Collaborative-filtering product/content recommendations over a relation of (user, item, value) interactions. Fits an implicit-feedback Alternating Least Squares (ALS) model and exposes three SQL table functions: recommend_all (top-N recommended items per user), similar_items (top-N item-item neighbours by cosine of the ALS item factors), and recommend_for (top-N recommendations for one target user). value is the interaction strength (confidence) and defaults to 1.0 when the value column is absent. Use for 'people who liked X also liked Y', personalized recommendations, and item similarity directly in SQL.",
+        "vgi.doc_md": "# Recommender: Collaborative-Filtering Recommendations in SQL\n\nGenerate personalized product and content recommendations directly in DuckDB SQL with implicit-feedback **Alternating Least Squares (ALS)** collaborative filtering -- no separate ML pipeline, notebook, or model server required.\n\nThis VGI worker turns a single relation of `(user, item, value)` interactions -- clicks, purchases, plays, ratings, or any engagement signal -- into top-N recommendations, item-to-item similarity, and per-user suggestions. It is built for data engineers, analysts, and application developers who want a fast, reproducible recommender system they can call from a query instead of standing up a dedicated service. Because it runs as a DuckDB attachment, you can join recommendations straight back to your catalog tables, filter them, and ship them to downstream tables or dashboards in a single statement.\n\nUnder the hood the worker fits an implicit-feedback ALS matrix-factorization model with the [`implicit`](https://github.com/benfred/implicit) library by Ben Frederickson -- a fast, Cython/BLAS-accelerated implementation of the classic ALS algorithm for implicit datasets. Each call buffers the whole interaction relation, learns latent user and item factors, and scores candidates by the dot product (recommendations) or the cosine of the item factors (similarity). Results are deterministic (pinned `random_state`, single-threaded BLAS), and `value` is treated as the interaction confidence, defaulting to `1.0` when the value column is omitted. See the [implicit documentation](https://benfred.github.io/implicit/) and the [collaborative filtering overview](https://en.wikipedia.org/wiki/Collaborative_filtering) for background on the method.\n\n## Function surface\n\nThe worker covers the three everyday collaborative-filtering workloads: personalized top-N recommendations for the whole user base at once, on-demand recommendations for a single target user, and item-to-item nearest-neighbour lookups (the classic *\"people who liked X also liked Y\"* / related-items surface).\n\nEvery recommendation function takes the interaction relation as a positional `(user, item, value)` subquery (`Arg(0)`) and accepts the column roles and hyperparameters as named arguments (`user := ...`, `item := ...`, `value := ...`, `n := ...`, `factors := ...`). The relation's columns are the data; the named arguments just declare which column plays the user, item, and confidence role, so the same query works over any interaction table by pointing the roles at its columns.\n",
+        "vgi.keywords": "[\"recommender\", \"recommendations\", \"collaborative filtering\", \"ALS\", \"implicit feedback\", \"recommend_all\", \"similar_items\", \"recommend_for\", \"similar items\", \"personalization\", \"matrix factorization\", \"top-N\"]",
+        "vgi.license": "MIT",
+        "vgi.subtitle": "Recommend items and find similar items from user interaction data.",
+        "vgi.support_contact": "https://github.com/Query-farm/vgi-recommender/issues",
+        "vgi.support_policy_url": "https://github.com/Query-farm/vgi-recommender/blob/main/README.md",
+        "vgi.title": "Item Recommender"
+      },
+      false,
+      "vgi",
+      false,
+      false,
+      null,
+      {
+        "location": "uvx --python 3.13 --from git+https://github.com/Query-farm/vgi-recommender@d910f9d42221ab0ac3de8b0743988594764a88bd vgi-recommender"
+      }
+    ]
+  ]
+}

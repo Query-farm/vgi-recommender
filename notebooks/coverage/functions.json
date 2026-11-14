@@ -1,0 +1,181 @@
+{
+  "query": "SELECT * FROM duckdb_functions() WHERE database_name='recommender' ORDER BY schema_name,function_name",
+  "captured_at": "2026-11-14T21:46:15.685202+00:00",
+  "columns": [
+    "database_name",
+    "database_oid",
+    "schema_name",
+    "function_name",
+    "alias_of",
+    "function_type",
+    "description",
+    "comment",
+    "tags",
+    "return_type",
+    "parameters",
+    "parameter_types",
+    "varargs",
+    "macro_definition",
+    "has_side_effects",
+    "internal",
+    "extension_name",
+    "function_oid",
+    "examples",
+    "stability",
+    "categories"
+  ],
+  "rows": [
+    [
+      "recommender",
+      "22592",
+      "main",
+      "recommend_all",
+      null,
+      "table",
+      "Collaborative-filtering: fit implicit-feedback ALS, emit top-N recommended items per user (excluding already-seen items) as (user, item, score, rank). value is the interaction strength (confidence); defaults to 1.0 if absent.",
+      null,
+      {
+        "vgi.category": "user-recommendations",
+        "vgi.doc_llm": "# recommend_all\n\nBatch collaborative-filtering recommender. Consumes a whole relation of `(user, item, value)` interactions, fits an implicit-feedback Alternating Least Squares (ALS) model over the entire user x item matrix, and returns the **top-N recommended items for every user** that appears in the input.\n\n## When to use\nUse this when you want personalized recommendations for the full user base in one pass -- e.g. precomputing a 'recommended for you' shelf for every user. For a single user prefer `recommend_for`; for item-to-item neighbours prefer `similar_items`.\n\n## Inputs\n- `Arg(0)`: a `(SELECT user, item, value)` subquery -- the interaction relation.\n- `user`, `item`, `value`: names of the columns playing each role.\n- `n`: recommendations per user (default 10).\n- `factors`: ALS latent-factor count (default 50, clamped on tiny matrices).\n\n## Output\nRows of `(user, item, score, rank)`; `score` is the ALS dot-product score and `rank` is 1-based within each user (1 = best).\n\n## Behavior & edge cases\nItems the user has already interacted with are excluded. `value` is the interaction confidence and defaults to 1.0 when the value column is absent. Results are deterministic (pinned random_state, single-threaded BLAS).",
+        "vgi.doc_md": "## recommend_all\n\nTop-N collaborative-filtering recommendations for **all** users, computed with implicit-feedback ALS over the supplied interaction relation.\n\n### Usage\n\nPass the interaction relation as the positional `(user, item, value)` subquery and name the role columns plus `n` (recommendations per user). Each output row is `(user, item, score, rank)`; order by `user` then `rank` for a stable, per-user ranked list. A ready-to-run demonstration lives in this function's example queries.\n\n### Notes\n\n- One ALS model is fit over the entire matrix, so the whole relation is buffered before any rows are emitted.\n- Already-seen items are never recommended back to a user.\n- `value` (confidence) defaults to 1.0 if the column is missing; `factors` is auto-clamped on small matrices.",
+        "vgi.example_queries": "[{\"description\": \"Top-3 recommendations per user over an inline interaction relation.\", \"sql\": \"SELECT user, item, rank FROM recommender.main.recommend_all((SELECT * FROM (VALUES ('u1','A',1.0),('u1','B',1.0),('u1','C',1.0),('u2','A',1.0),('u2','B',1.0),('u2','C',1.0),('u3','A',1.0),('u3','B',1.0),('u4','A',1.0),('u4','B',1.0)) AS events(u, i, v)), user := 'u', item := 'i', value := 'v', n := 3) ORDER BY user, rank\"}, {\"description\": \"Recommend novel item C to users u3 and u4 (planted CF signal).\", \"sql\": \"SELECT user, item FROM recommender.main.recommend_all((SELECT * FROM (VALUES ('u1','A',1.0),('u1','B',1.0),('u1','C',1.0),('u2','A',1.0),('u2','B',1.0),('u2','C',1.0),('u3','A',1.0),('u3','B',1.0),('u4','A',1.0),('u4','B',1.0)) AS events(u, i, v)), user := 'u', item := 'i', value := 'v', n := 1) WHERE user IN ('u3', 'u4') ORDER BY user\"}]",
+        "vgi.keywords": "[\"recommend\", \"recommendation\", \"recommender\", \"collaborative filtering\", \"ALS\", \"implicit feedback\", \"top-N\", \"personalization\", \"batch recommendations\", \"matrix factorization\"]",
+        "vgi.result_columns_schema": "[{\"name\": \"user\", \"type\": \"VARCHAR\", \"description\": \"User id (original, as supplied).\"}, {\"name\": \"item\", \"type\": \"VARCHAR\", \"description\": \"Recommended item id (not previously interacted with).\"}, {\"name\": \"score\", \"type\": \"DOUBLE\", \"description\": \"ALS recommendation score (higher = stronger).\"}, {\"name\": \"rank\", \"type\": \"INTEGER\", \"description\": \"Rank within this user's recommendations (1 = best).\"}]",
+        "vgi.title": "Recommend Items for All Users"
+      },
+      null,
+      [
+        "data",
+        "value",
+        "user",
+        "n",
+        "item",
+        "factors"
+      ],
+      [
+        "TABLE",
+        "VARCHAR",
+        "VARCHAR",
+        "BIGINT",
+        "VARCHAR",
+        "BIGINT"
+      ],
+      null,
+      null,
+      null,
+      true,
+      null,
+      22596,
+      [
+        "SELECT user, item, rank FROM recommender.main.recommend_all((SELECT * FROM (VALUES ('u1','A',1.0),('u1','B',1.0),('u1','C',1.0),('u2','A',1.0),('u2','B',1.0),('u2','C',1.0),('u3','A',1.0),('u3','B',1.0),('u4','A',1.0),('u4','B',1.0)) AS events(u, i, v)), user := 'u', item := 'i', value := 'v', n := 3) ORDER BY user, rank"
+      ],
+      null,
+      [
+        "recommender",
+        "collaborative-filtering"
+      ]
+    ],
+    [
+      "recommender",
+      "22592",
+      "main",
+      "recommend_for",
+      null,
+      "table",
+      "Top-N recommended items for a single specified user, excluding items that user has already interacted with, as (item, score, rank). Returns no rows when the requested user is absent from the interaction relation.",
+      null,
+      {
+        "vgi.category": "user-recommendations",
+        "vgi.doc_llm": "# recommend_for\n\nSingle-user collaborative-filtering recommender. Fits implicit-feedback ALS over the supplied `(user, item, value)` interaction relation and returns the **top-N recommended items for one target user** (`target_user`, a named scalar argument), excluding items that user has already interacted with.\n\n## When to use\nUse this for an on-demand 'recommended for you' list for a specific user. For the whole user base in one pass use `recommend_all`; for item-to-item neighbours use `similar_items`.\n\n## Inputs\n- `Arg(0)`: a `(SELECT user, item, value)` subquery -- the interaction relation.\n- `user`, `item`, `value`: names of the columns playing each role.\n- `target_user`: the id of the single user to recommend for (named scalar).\n- `n`: number of recommendations (default 10).\n- `factors`: ALS latent-factor count (default 50, clamped on tiny matrices).\n\n## Output\nRows of `(item, score, rank)`; `score` is the ALS dot-product score and `rank` is 1-based (1 = best).\n\n## Behavior & edge cases\nAn unknown `target_user` yields zero rows (not an error). Already-seen items are excluded. `value` is interaction confidence and defaults to 1.0 when absent. Deterministic (pinned random_state, single-threaded BLAS).",
+        "vgi.doc_md": "## recommend_for\n\nTop-N collaborative-filtering recommendations for a **single target user**, computed with implicit-feedback ALS over the supplied interaction relation.\n\n### Usage\n\nPass the interaction relation as the positional `(user, item, value)` subquery, name the role columns, and set `target_user` to the id of the one user to score (plus `n`, the number of recommendations). Each output row is `(item, score, rank)`, ordered by `rank`. A ready-to-run demonstration lives in this function's example queries.\n\n### Notes\n\n- `target_user` is a named scalar argument naming the one user to score.\n- An unknown `target_user` returns an empty result rather than raising.\n- Already-seen items are never recommended; `value` (confidence) defaults to 1.0 if the column is missing.",
+        "vgi.example_queries": "[{\"description\": \"Top-2 recommendations for a single target user (u3).\", \"sql\": \"SELECT item, rank FROM recommender.main.recommend_for((SELECT * FROM (VALUES ('u1','A',1.0),('u1','B',1.0),('u1','C',1.0),('u2','A',1.0),('u2','B',1.0),('u2','C',1.0),('u3','A',1.0),('u3','B',1.0),('u4','A',1.0),('u4','B',1.0)) AS events(u, i, v)), user := 'u', item := 'i', value := 'v', target_user := 'u3', n := 2) ORDER BY rank\"}]",
+        "vgi.keywords": "[\"recommend for user\", \"single user recommendations\", \"personalized\", \"recommend_for\", \"top-N\", \"collaborative filtering\", \"ALS\", \"implicit feedback\", \"user recommendations\"]",
+        "vgi.result_columns_schema": "[{\"name\": \"item\", \"type\": \"VARCHAR\", \"description\": \"Recommended item id (not previously interacted with).\"}, {\"name\": \"score\", \"type\": \"DOUBLE\", \"description\": \"ALS recommendation score (higher = stronger).\"}, {\"name\": \"rank\", \"type\": \"INTEGER\", \"description\": \"Rank within the recommendations (1 = best).\"}]",
+        "vgi.title": "Recommend Items for One User"
+      },
+      null,
+      [
+        "data",
+        "user",
+        "n",
+        "value",
+        "target_user",
+        "item",
+        "factors"
+      ],
+      [
+        "TABLE",
+        "VARCHAR",
+        "BIGINT",
+        "VARCHAR",
+        "VARCHAR",
+        "VARCHAR",
+        "BIGINT"
+      ],
+      null,
+      null,
+      null,
+      true,
+      null,
+      22597,
+      [
+        "SELECT item, rank FROM recommender.main.recommend_for((SELECT * FROM (VALUES ('u1','A',1.0),('u1','B',1.0),('u1','C',1.0),('u2','A',1.0),('u2','B',1.0),('u2','C',1.0),('u3','A',1.0),('u3','B',1.0),('u4','A',1.0),('u4','B',1.0)) AS events(u, i, v)), user := 'u', item := 'i', value := 'v', target_user := 'u3', n := 2) ORDER BY rank"
+      ],
+      null,
+      [
+        "recommender",
+        "collaborative-filtering"
+      ]
+    ],
+    [
+      "recommender",
+      "22592",
+      "main",
+      "similar_items",
+      null,
+      "table",
+      "Item-item collaborative filtering: top-N most similar items per item by cosine of the ALS item factors, as (item, similar_item, similarity, rank).",
+      null,
+      {
+        "vgi.category": "item-similarity",
+        "vgi.doc_llm": "# similar_items\n\nItem-to-item collaborative-filtering neighbour finder. Fits implicit-feedback ALS over the supplied `(user, item, value)` interaction relation, then for **every item** returns its top-N most similar items ranked by the cosine similarity of their ALS latent factors.\n\n## When to use\nUse this to power 'customers who liked X also liked Y', 'related products', or 'more like this' surfaces -- recommendations that depend on an item, not a user. For per-user recommendations use `recommend_all` or `recommend_for`.\n\n## Inputs\n- `Arg(0)`: a `(SELECT user, item, value)` subquery -- the interaction relation.\n- `user`, `item`, `value`: names of the columns playing each role.\n- `n`: similar items per item (default 10).\n- `factors`: ALS latent-factor count (default 50, clamped on tiny matrices).\n\n## Output\nRows of `(item, similar_item, similarity, rank)`; `similarity` is cosine of the ALS item factors (1.0 = identical) and `rank` is 1-based per item.\n\n## Behavior & edge cases\nAn item is never listed as its own neighbour (the self-match at similarity 1.0 is dropped). `value` is interaction confidence and defaults to 1.0 when absent. Items co-interacted by the same users score as nearest neighbours. Deterministic (pinned random_state, single-threaded BLAS).",
+        "vgi.doc_md": "## similar_items\n\nTop-N most **similar items** for every item, by cosine similarity of implicit-feedback ALS item factors over the supplied interaction relation.\n\n### Usage\n\nPass the interaction relation as the positional `(user, item, value)` subquery and name the role columns plus `n` (neighbours per item). Each output row is `(item, similar_item, similarity, rank)`; order by `item` then `rank` for a stable neighbour list. A ready-to-run demonstration lives in this function's example queries.\n\n### Notes\n\n- The query item itself is excluded from its own neighbour list.\n- One ALS model is fit over the whole matrix, so the relation is fully buffered before any rows are emitted.\n- `value` (confidence) defaults to 1.0 if the column is missing; `factors` is auto-clamped on small matrices.",
+        "vgi.example_queries": "[{\"description\": \"Top-2 most similar items for every item in an inline relation.\", \"sql\": \"SELECT item, similar_item, rank FROM recommender.main.similar_items((SELECT * FROM (VALUES ('u1','A',1.0),('u1','B',1.0),('u1','C',1.0),('u2','A',1.0),('u2','B',1.0),('u2','C',1.0),('u3','A',1.0),('u3','B',1.0),('u4','A',1.0),('u4','B',1.0)) AS events(u, i, v)), user := 'u', item := 'i', value := 'v', n := 2) ORDER BY item, rank\"}]",
+        "vgi.keywords": "[\"similar items\", \"item similarity\", \"related items\", \"item-item\", \"more like this\", \"nearest neighbours\", \"cosine similarity\", \"collaborative filtering\", \"ALS\", \"recommendations\"]",
+        "vgi.result_columns_schema": "[{\"name\": \"item\", \"type\": \"VARCHAR\", \"description\": \"Item id (original, as supplied).\"}, {\"name\": \"similar_item\", \"type\": \"VARCHAR\", \"description\": \"A similar item id.\"}, {\"name\": \"similarity\", \"type\": \"DOUBLE\", \"description\": \"Cosine similarity of ALS item factors (1 = identical).\"}, {\"name\": \"rank\", \"type\": \"INTEGER\", \"description\": \"Rank within this item's neighbours (1 = most similar).\"}]",
+        "vgi.title": "Find Similar Items by Co-Interaction"
+      },
+      null,
+      [
+        "data",
+        "value",
+        "user",
+        "n",
+        "item",
+        "factors"
+      ],
+      [
+        "TABLE",
+        "VARCHAR",
+        "VARCHAR",
+        "BIGINT",
+        "VARCHAR",
+        "BIGINT"
+      ],
+      null,
+      null,
+      null,
+      true,
+      null,
+      22598,
+      [
+        "SELECT item, similar_item, rank FROM recommender.main.similar_items((SELECT * FROM (VALUES ('u1','A',1.0),('u1','B',1.0),('u1','C',1.0),('u2','A',1.0),('u2','B',1.0),('u2','C',1.0),('u3','A',1.0),('u3','B',1.0),('u4','A',1.0),('u4','B',1.0)) AS events(u, i, v)), user := 'u', item := 'i', value := 'v', n := 2) ORDER BY item, rank"
+      ],
+      null,
+      [
+        "recommender",
+        "collaborative-filtering"
+      ]
+    ]
+  ]
+}

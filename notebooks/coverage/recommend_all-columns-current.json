@@ -1,0 +1,46 @@
+{
+  "query": "DESCRIBE SELECT * FROM recommender.main.recommend_all((SELECT * FROM recommender.main.sample_interactions),n:=1,factors:=2)",
+  "captured_at": "2026-11-14T21:46:39.053636+00:00",
+  "columns": [
+    "column_name",
+    "column_type",
+    "null",
+    "key",
+    "default",
+    "extra"
+  ],
+  "rows": [
+    [
+      "user",
+      "VARCHAR",
+      "YES",
+      null,
+      null,
+      null
+    ],
+    [
+      "item",
+      "VARCHAR",
+      "YES",
+      null,
+      null,
+      null
+    ],
+    [
+      "score",
+      "DOUBLE",
+      "YES",
+      null,
+      null,
+      null
+    ],
+    [
+      "rank",
+      "INTEGER",
+      "YES",
+      null,
+      null,
+      null
+    ]
+  ]
+}

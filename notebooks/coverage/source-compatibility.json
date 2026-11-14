@@ -1,0 +1,15 @@
+{
+  "release": "v0.4.0",
+  "release_commit": "ea8f44a987cecb5a4ff584fb4bae36f77849ca7b",
+  "current_revision": "d910f9d42221ab0ac3de8b0743988594764a88bd",
+  "root_dependencies_unchanged": true,
+  "source_review": "Current similar_items caps its N+1 request at the item count and deduplicates padded neighbor IDs; release lacks this protection. Notebook requests three neighbors among eight items, below the affected boundary. Other source changes are composed examples/catalog metadata. All complete function and view column signatures match. Compatible coverage does not claim behavioral equality for oversized neighbor requests.",
+  "source_ci": {
+    "url": "https://github.com/Query-farm/vgi-recommender/actions/runs/43582186464",
+    "revision": "d910f9d42221ab0ac3de8b0743988594764a88bd",
+    "conclusion": "success"
+  },
+  "runtime": "Haybarn2.0.0rc11",
+  "launch": "uvx --python 3.13 --from git+https://github.com/Query-farm/vgi-recommender@v0.4.0 vgi-recommender",
+  "runtime_review": "Actual complete release/current catalogs collected with isolated SQL secret directories. Release-owned dependency declarations work without older notebook transitive overrides; no source rebuild or suite repetition."
+}

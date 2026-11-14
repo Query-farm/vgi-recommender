@@ -1,0 +1,328 @@
+{
+  "schema_version": 1,
+  "status": "met",
+  "meets_target": true,
+  "catalogs": {
+    "released": {
+      "catalog_status": "verified",
+      "revision": "v0.4.0",
+      "catalog_sha256": "ebff8e46aa84867b94e90948de8654f17c537631d90b9d2e9f606b618a4a653e",
+      "collection_reconciled": true,
+      "denominator": 4,
+      "observed_objects": 4,
+      "required": 4,
+      "verified_count": 4,
+      "candidate_count": 0,
+      "fraction": 1.0,
+      "meets_target": true,
+      "exact_runtime_count": 4,
+      "runtime_revisions": [
+        "v0.4.0"
+      ],
+      "covered": [
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "recommend_all"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "recommend_for"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "sample_interactions"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "similar_items"
+        }
+      ],
+      "uncovered": [],
+      "objects": [
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "recommend_all",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "recommend_all(data TABLE, value VARCHAR, user VARCHAR, n BIGINT, item VARCHAR, factors BIGINT) -> TABLE(user VARCHAR, item VARCHAR, score DOUBLE, rank INTEGER)"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "recommend_for",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "recommend_for(data TABLE, user VARCHAR, n BIGINT, value VARCHAR, target_user VARCHAR, item VARCHAR, factors BIGINT) -> TABLE(item VARCHAR, score DOUBLE, rank INTEGER)"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "sample_interactions",
+          "kinds": [
+            "table"
+          ],
+          "signatures": [
+            "VIEW(user VARCHAR, item VARCHAR, value DECIMAL(2,1))"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "similar_items",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "similar_items(data TABLE, value VARCHAR, user VARCHAR, n BIGINT, item VARCHAR, factors BIGINT) -> TABLE(item VARCHAR, similar_item VARCHAR, similarity DOUBLE, rank INTEGER)"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        }
+      ],
+      "issues": []
+    },
+    "current": {
+      "catalog_status": "verified",
+      "revision": "d910f9d42221ab0ac3de8b0743988594764a88bd",
+      "catalog_sha256": "5f39128c8d7808065e653b4dedc071efb3187e34f074eca098bc030a1c6b17ef",
+      "collection_reconciled": true,
+      "denominator": 4,
+      "observed_objects": 4,
+      "required": 4,
+      "verified_count": 4,
+      "candidate_count": 0,
+      "fraction": 1.0,
+      "meets_target": true,
+      "exact_runtime_count": 0,
+      "runtime_revisions": [
+        "v0.4.0"
+      ],
+      "covered": [
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "recommend_all"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "recommend_for"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "sample_interactions"
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "similar_items"
+        }
+      ],
+      "uncovered": [],
+      "objects": [
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "recommend_all",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "recommend_all(data TABLE, value VARCHAR, user VARCHAR, n BIGINT, item VARCHAR, factors BIGINT) -> TABLE(user VARCHAR, item VARCHAR, score DOUBLE, rank INTEGER)"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "recommend_for",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "recommend_for(data TABLE, user VARCHAR, n BIGINT, value VARCHAR, target_user VARCHAR, item VARCHAR, factors BIGINT) -> TABLE(item VARCHAR, score DOUBLE, rank INTEGER)"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "sample_interactions",
+          "kinds": [
+            "table"
+          ],
+          "signatures": [
+            "VIEW(user VARCHAR, item VARCHAR, value DECIMAL(2,1))"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        },
+        {
+          "schema": [
+            "main"
+          ],
+          "name": "similar_items",
+          "kinds": [
+            "function"
+          ],
+          "signatures": [
+            "similar_items(data TABLE, value VARCHAR, user VARCHAR, n BIGINT, item VARCHAR, factors BIGINT) -> TABLE(item VARCHAR, similar_item VARCHAR, similarity DOUBLE, rank INTEGER)"
+          ],
+          "access": [
+            "read"
+          ],
+          "authentication": [
+            "none"
+          ]
+        }
+      ],
+      "issues": []
+    }
+  },
+  "interface_drift": {
+    "known": true,
+    "current_only": [],
+    "released_only": [],
+    "changed": []
+  },
+  "notebooks": {
+    "01_audit_recommendation_slates.ipynb": {
+      "verified": true,
+      "issues": []
+    }
+  },
+  "examples": [
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "sample_interactions"
+      },
+      "notebook": "01_audit_recommendation_slates.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "ebff8e46aa84867b94e90948de8654f17c537631d90b9d2e9f606b618a4a653e"
+    },
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "recommend_all"
+      },
+      "notebook": "01_audit_recommendation_slates.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "ebff8e46aa84867b94e90948de8654f17c537631d90b9d2e9f606b618a4a653e"
+    },
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "recommend_for"
+      },
+      "notebook": "01_audit_recommendation_slates.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "ebff8e46aa84867b94e90948de8654f17c537631d90b9d2e9f606b618a4a653e"
+    },
+    {
+      "status": "verified",
+      "issues": [],
+      "verified_catalogs": [
+        "released",
+        "current"
+      ],
+      "object": {
+        "schema": [
+          "main"
+        ],
+        "name": "similar_items"
+      },
+      "notebook": "01_audit_recommendation_slates.ipynb",
+      "runtime_revision": "v0.4.0",
+      "runtime_catalog_sha256": "ebff8e46aa84867b94e90948de8654f17c537631d90b9d2e9f606b618a4a653e"
+    }
+  ],
+  "issues": []
+}

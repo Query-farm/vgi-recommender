@@ -1,0 +1,38 @@
+{
+  "query": "DESCRIBE SELECT * FROM recommender.main.sample_interactions",
+  "captured_at": "2026-11-14T21:46:15.706368+00:00",
+  "columns": [
+    "column_name",
+    "column_type",
+    "null",
+    "key",
+    "default",
+    "extra"
+  ],
+  "rows": [
+    [
+      "user",
+      "VARCHAR",
+      "YES",
+      null,
+      null,
+      null
+    ],
+    [
+      "item",
+      "VARCHAR",
+      "YES",
+      null,
+      null,
+      null
+    ],
+    [
+      "value",
+      "DECIMAL(2,1)",
+      "YES",
+      null,
+      null,
+      null
+    ]
+  ]
+}

@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "catalogs": {
+    "released": {
+      "path": "coverage/catalog-released.json",
+      "sha256": "ebff8e46aa84867b94e90948de8654f17c537631d90b9d2e9f606b618a4a653e",
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root/notebooks_earthquakes",
+        "reviewed_at": "2026-11-14T21:57:06.183517+00:00",
+        "catalog_sha256": "ebff8e46aa84867b94e90948de8654f17c537631d90b9d2e9f606b618a4a653e",
+        "notes": "Complete actual catalog: three relation-input functions plus one built-in view = four. Full argument and output schemas match current. View DECIMAL(2,1) value type recorded rather than prose DOUBLE. Current source caps/deduplicates oversized similar_items requests; release notebook stays below this boundary. Exact current notebook execution not claimed."
+      }
+    },
+    "current": {
+      "path": "coverage/catalog-current.json",
+      "sha256": "5f39128c8d7808065e653b4dedc071efb3187e34f074eca098bc030a1c6b17ef",
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root/notebooks_earthquakes",
+        "reviewed_at": "2026-11-14T21:57:06.183517+00:00",
+        "catalog_sha256": "5f39128c8d7808065e653b4dedc071efb3187e34f074eca098bc030a1c6b17ef",
+        "notes": "Complete actual catalog: three relation-input functions plus one built-in view = four. Full argument and output schemas match current. View DECIMAL(2,1) value type recorded rather than prose DOUBLE. Current source caps/deduplicates oversized similar_items requests; release notebook stays below this boundary. Exact current notebook execution not claimed."
+      }
+    }
+  },
+  "notebooks": [
+    {
+      "path": "01_audit_recommendation_slates.ipynb",
+      "sha256": "e08f4003a7a109da2689a7cb138c0c01aa4f39ad3c67dfd9c8ddb16dc5e75420",
+      "execution": {
+        "path": "coverage/run-01.json",
+        "sha256": "3fdb9c1fdc552f0180b1ea6d88fa3d29aca7e08ac0b23a71bb5dbc2677c781f2"
+      }
+    }
+  ],
+  "examples": [
+    {
+      "object": {
+        "schema": "main",
+        "name": "sample_interactions"
+      },
+      "notebook": "01_audit_recommendation_slates.ipynb",
+      "sql": [
+        {
+          "cell": "sample-query",
+          "reference": "recommender.main.sample_interactions"
+        }
+      ],
+      "narrative_cells": [
+        "sample-story"
+      ],
+      "result_cells": [
+        "sample-query",
+        "sample-finding"
+      ],
+      "interpretation_cells": [
+        "sample-finding"
+      ],
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root/notebooks_earthquakes",
+        "reviewed_at": "2026-11-14T21:57:06.183517+00:00",
+        "notebook_sha256": "e08f4003a7a109da2689a7cb138c0c01aa4f39ad3c67dfd9c8ddb16dc5e75420",
+        "catalog_sha256": [
+          "ebff8e46aa84867b94e90948de8654f17c537631d90b9d2e9f606b618a4a653e",
+          "5f39128c8d7808065e653b4dedc071efb3187e34f074eca098bc030a1c6b17ef"
+        ],
+        "purpose": "Establish eligible unseen-item ceilings from the built-in relation before interpreting a fitted recommendation.",
+        "finding": "Ten interactions span four users and three items. Two users have no unseen candidate; u3/u4 have only C and receive it. Full population left join preserves exhausted users; this planted example does not measure prediction accuracy."
+      }
+    },
+    {
+      "object": {
+        "schema": "main",
+        "name": "recommend_all"
+      },
+      "notebook": "01_audit_recommendation_slates.ipynb",
+      "sql": [
+        {
+          "cell": "model-query",
+          "reference": "recommender.main.recommend_all"
+        }
+      ],
+      "narrative_cells": [
+        "model-story",
+        "matrix-story",
+        "exposure-story",
+        "experiment-story"
+      ],
+      "result_cells": [
+        "model-query",
+        "availability-finding",
+        "matrix-chart",
+        "exposure-chart",
+        "checks-query"
+      ],
+      "interpretation_cells": [
+        "availability-finding",
+        "exposure-chart",
+        "experiment-story"
+      ],
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root/notebooks_earthquakes",
+        "reviewed_at": "2026-11-14T21:57:06.183517+00:00",
+        "notebook_sha256": "e08f4003a7a109da2689a7cb138c0c01aa4f39ad3c67dfd9c8ddb16dc5e75420",
+        "catalog_sha256": [
+          "ebff8e46aa84867b94e90948de8654f17c537631d90b9d2e9f606b618a4a653e",
+          "5f39128c8d7808065e653b4dedc071efb3187e34f074eca098bc030a1c6b17ef"
+        ],
+        "purpose": "Audit novel recommendation populations, ranks and proposed exposure while varying maximum slate size at fixed input/model settings.",
+        "finding": "Seven learners receive fourteen default recommendations and twenty-one in the three-slot experiment; L08 remains in the population with zero because all items were observed. Counts concern proposed lists, not delivery or engagement; blank observations are unknown rather than negative feedback."
+      }
+    },
+    {
+      "object": {
+        "schema": "main",
+        "name": "recommend_for"
+      },
+      "notebook": "01_audit_recommendation_slates.ipynb",
+      "sql": [
+        {
+          "cell": "model-query",
+          "reference": "recommender.main.recommend_for"
+        }
+      ],
+      "narrative_cells": [
+        "model-story",
+        "checks-story"
+      ],
+      "result_cells": [
+        "checks-query",
+        "availability-finding"
+      ],
+      "interpretation_cells": [
+        "availability-finding",
+        "checks-story"
+      ],
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root/notebooks_earthquakes",
+        "reviewed_at": "2026-11-14T21:57:06.183517+00:00",
+        "notebook_sha256": "e08f4003a7a109da2689a7cb138c0c01aa4f39ad3c67dfd9c8ddb16dc5e75420",
+        "catalog_sha256": [
+          "ebff8e46aa84867b94e90948de8654f17c537631d90b9d2e9f606b618a4a653e",
+          "5f39128c8d7808065e653b4dedc071efb3187e34f074eca098bc030a1c6b17ef"
+        ],
+        "purpose": "Compare independently fitted single-user results with that user\u2019s all-user rows and distinguish unknown from exhausted users.",
+        "finding": "Single-user item identities/ranks agree and scores differ by less than 1e-6 from all-user output at matching settings. Unknown NEW returns zero; known L08 returns zero because every module was seen. Checks explicitly verify both zero populations and API agreement; no invented fallback is returned."
+      }
+    },
+    {
+      "object": {
+        "schema": "main",
+        "name": "similar_items"
+      },
+      "notebook": "01_audit_recommendation_slates.ipynb",
+      "sql": [
+        {
+          "cell": "neighbors-query",
+          "reference": "recommender.main.similar_items"
+        }
+      ],
+      "narrative_cells": [
+        "exposure-story",
+        "attach-story",
+        "experiment-story"
+      ],
+      "result_cells": [
+        "neighbors-finding",
+        "checks-query"
+      ],
+      "interpretation_cells": [
+        "neighbors-finding",
+        "experiment-story"
+      ],
+      "review": {
+        "status": "approved",
+        "reviewer": "Codex /root/notebooks_earthquakes",
+        "reviewed_at": "2026-11-14T21:57:06.183517+00:00",
+        "notebook_sha256": "e08f4003a7a109da2689a7cb138c0c01aa4f39ad3c67dfd9c8ddb16dc5e75420",
+        "catalog_sha256": [
+          "ebff8e46aa84867b94e90948de8654f17c537631d90b9d2e9f606b618a4a653e",
+          "5f39128c8d7808065e653b4dedc071efb3187e34f074eca098bc030a1c6b17ef"
+        ],
+        "purpose": "Interpret item-factor neighbor cosines separately from user recommendation dot products and verify stable neighbors across list-length changes.",
+        "finding": "For C the top two are Joins and SQL basics at rounded 0.99534; the third Deployment is negative -0.08672. Rounded equality is not an exact-tie assertion. Three-neighbor output remains fixed across slate size2\u21923, excludes self and duplicates, and stays below the release padded-neighbor boundary."
+      }
+    }
+  ]
+}

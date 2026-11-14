@@ -1,0 +1,46 @@
+{
+  "query": "DESCRIBE SELECT * FROM recommender.main.similar_items((SELECT * FROM recommender.main.sample_interactions),n:=1,factors:=2)",
+  "captured_at": "2026-11-14T21:46:15.723012+00:00",
+  "columns": [
+    "column_name",
+    "column_type",
+    "null",
+    "key",
+    "default",
+    "extra"
+  ],
+  "rows": [
+    [
+      "item",
+      "VARCHAR",
+      "YES",
+      null,
+      null,
+      null
+    ],
+    [
+      "similar_item",
+      "VARCHAR",
+      "YES",
+      null,
+      null,
+      null
+    ],
+    [
+      "similarity",
+      "DOUBLE",
+      "YES",
+      null,
+      null,
+      null
+    ],
+    [
+      "rank",
+      "INTEGER",
+      "YES",
+      null,
+      null,
+      null
+    ]
+  ]
+}

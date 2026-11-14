@@ -1,0 +1,46 @@
+{
+  "query": "SELECT * FROM duckdb_views() WHERE database_name='recommender'",
+  "captured_at": "2026-11-14T21:46:15.700483+00:00",
+  "columns": [
+    "database_name",
+    "database_oid",
+    "schema_name",
+    "schema_oid",
+    "view_name",
+    "view_oid",
+    "comment",
+    "tags",
+    "internal",
+    "temporary",
+    "column_count",
+    "sql",
+    "is_bound"
+  ],
+  "rows": [
+    [
+      "recommender",
+      22592,
+      "main",
+      22593,
+      "sample_interactions",
+      22729,
+      "Built-in sample (user, item, value) interaction dataset to browse and feed to the functions.",
+      {
+        "domain": "machine-learning",
+        "topic": "collaborative-filtering",
+        "vgi.category": "sample-data",
+        "vgi.doc_llm": "# sample_interactions\n\nA small, static, built-in interaction dataset -- 10 `(user, item, value)` rows -- exposed as a browsable view so you can see the exact input shape the recommendation functions expect without supplying your own data. `SELECT` from it freely (it fits no model and touches no network), then feed it straight into `recommend_all`, `similar_items`, or `recommend_for` as their interaction relation. Its columns are named `user`, `item`, and `value`, which are exactly the functions' default role arguments, so `recommend_all((SELECT * FROM recommender.main.sample_interactions))` works with no role arguments at all.\n\n## Contents\nA deliberately rigged signal: users `u1`/`u2` interacted with items `A`, `B`, and `C`; `u3`/`u4` with only `A` and `B`. Collaborative filtering therefore recommends the unseen item `C` to `u3` and `u4`, and treats `A` and `B` as each other's nearest neighbours -- handy for a first, self-contained end-to-end call.",
+        "vgi.doc_md": "## sample_interactions\n\nA built-in, static `(user, item, value)` interaction dataset (10 rows) exposed as a browsable view. Use it to learn the input shape the recommendation functions expect and as a ready-made relation to try them on -- no data of your own required.\n\n### Columns\n\n- `user` -- interacting user id (`VARCHAR`).\n- `item` -- interacted item id (`VARCHAR`).\n- `value` -- interaction strength / confidence (`DOUBLE`, all `1.0` here).\n\n### Notes\n\nThe column names match the functions' default role arguments, so the whole view can be passed as the interaction relation with no `user :=` / `item :=` / `value :=` arguments. The rows carry a planted signal: `C` is the novel recommendation for `u3`/`u4`, and `A`/`B` are mutual nearest neighbours.",
+        "vgi.example_queries": "[{\"description\": \"Count how many interactions each user has in the sample dataset.\", \"sql\": \"SELECT \\\"user\\\", count(*) AS interactions FROM recommender.main.sample_interactions GROUP BY 1 ORDER BY 1\"}, {\"description\": \"Feed the sample dataset straight into recommend_all (default role args).\", \"sql\": \"SELECT \\\"user\\\", item, rank FROM recommender.main.recommend_all((SELECT * FROM recommender.main.sample_interactions), n := 3) ORDER BY 1, rank\"}]",
+        "vgi.executable_examples": "[{\"description\": \"Count interactions per user in the built-in sample dataset.\", \"sql\": \"SELECT \\\"user\\\", count(*) AS interactions FROM recommender.main.sample_interactions GROUP BY 1 ORDER BY 1\", \"expected_result\": [{\"user\": \"u1\", \"interactions\": 3}, {\"user\": \"u2\", \"interactions\": 3}, {\"user\": \"u3\", \"interactions\": 2}, {\"user\": \"u4\", \"interactions\": 2}]}, {\"description\": \"Recommend the novel item C to users u3 and u4 from the sample dataset.\", \"sql\": \"SELECT \\\"user\\\", item FROM recommender.main.recommend_all((SELECT * FROM recommender.main.sample_interactions), n := 1) WHERE \\\"user\\\" IN ('u3', 'u4') ORDER BY 1\", \"expected_result\": [{\"user\": \"u3\", \"item\": \"C\"}, {\"user\": \"u4\", \"item\": \"C\"}]}]",
+        "vgi.keywords": "[\"sample data\", \"example dataset\", \"interactions\", \"user item value\", \"getting started\", \"browsable\", \"demo\", \"collaborative filtering\"]",
+        "vgi.title": "Sample Interaction Dataset"
+      },
+      false,
+      false,
+      null,
+      "CREATE VIEW sample_interactions AS SELECT \"user\", item, \"value\" FROM (SELECT * FROM (VALUES ('u1', 'A', 1.0), ('u1', 'B', 1.0), ('u1', 'C', 1.0), ('u2', 'A', 1.0), ('u2', 'B', 1.0), ('u2', 'C', 1.0), ('u3', 'A', 1.0), ('u3', 'B', 1.0), ('u4', 'A', 1.0), ('u4', 'B', 1.0)) AS valueslist) AS t(\"user\", item, \"value\");",
+      false
+    ]
+  ]
+}

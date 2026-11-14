@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "repository": "Query-farm/vgi-recommender",
+  "revision": "d910f9d42221ab0ac3de8b0743988594764a88bd",
+  "captured_at": "2026-11-14T21:57:06.011411+00:00",
+  "default_schema": "main",
+  "scope": "all_public_functions_and_tables",
+  "complete": true,
+  "evidence": [
+    {
+      "path": "coverage/arguments-current.json",
+      "sha256": "dcf9286de36bb17daf89addbaee7ded60e2c1b07b864d0e8a40f32e2fe3ca59e",
+      "description": "Actual full runtime functions/tables/views/arguments and DESCRIBE output; reviewed source compatibility"
+    },
+    {
+      "path": "coverage/catalog-metadata-current.json",
+      "sha256": "c5e4c63010bc496c25660210fad03d645d1feee92bb9217f6919634c0411792c",
+      "description": "Actual full runtime functions/tables/views/arguments and DESCRIBE output; reviewed source compatibility"
+    },
+    {
+      "path": "coverage/functions-current.json",
+      "sha256": "776cf0313021481be576c0f83c3c9d6ed3d6b2a79e283ca49954be34f8e6d945",
+      "description": "Actual full runtime functions/tables/views/arguments and DESCRIBE output; reviewed source compatibility"
+    },
+    {
+      "path": "coverage/recommend_all-columns-current.json",
+      "sha256": "5ab2f98c87a7b6896168cc77cdd6f1151bf87fedbb95389ffd1faae166f66710",
+      "description": "Actual full runtime functions/tables/views/arguments and DESCRIBE output; reviewed source compatibility"
+    },
+    {
+      "path": "coverage/recommend_for-columns-current.json",
+      "sha256": "41b1457c406dac20afeb88e5acbd96271ce56a41b825feba518841241e411ea4",
+      "description": "Actual full runtime functions/tables/views/arguments and DESCRIBE output; reviewed source compatibility"
+    },
+    {
+      "path": "coverage/sample_interactions-columns-current.json",
+      "sha256": "dbd8cc17f36fdce60a3505c847945feea1117ce0b5bfd7c2b04e6193659d5e6a",
+      "description": "Actual full runtime functions/tables/views/arguments and DESCRIBE output; reviewed source compatibility"
+    },
+    {
+      "path": "coverage/similar_items-columns-current.json",
+      "sha256": "7db9518d59b93e78e6f1cd8ddacbbe39802d42550667d4d302eeba0a4bafde9e",
+      "description": "Actual full runtime functions/tables/views/arguments and DESCRIBE output; reviewed source compatibility"
+    },
+    {
+      "path": "coverage/tables-current.json",
+      "sha256": "b95230deff6d1d20d990fcf7560ee15d797516cfe6e36d9b106550a6d076cbf3",
+      "description": "Actual full runtime functions/tables/views/arguments and DESCRIBE output; reviewed source compatibility"
+    },
+    {
+      "path": "coverage/views-current.json",
+      "sha256": "d5c6d4e3ecb9bb4f6860f04c8e52eecf53b5adf4de38d31921e73a200cc171e9",
+      "description": "Actual full runtime functions/tables/views/arguments and DESCRIBE output; reviewed source compatibility"
+    },
+    {
+      "path": "coverage/source-compatibility.json",
+      "sha256": "07d2efcfe0c86d5a6a983c25bc7e4ade3187b19e6141dd46f2208f51d40e2e17",
+      "description": "Actual full runtime functions/tables/views/arguments and DESCRIBE output; reviewed source compatibility"
+    }
+  ],
+  "objects": [
+    {
+      "schema": "main",
+      "name": "recommend_all",
+      "kind": "function",
+      "authentication": "none",
+      "access": "read",
+      "signatures": [
+        "recommend_all(data TABLE, value VARCHAR, user VARCHAR, n BIGINT, item VARCHAR, factors BIGINT) -> TABLE(user VARCHAR, item VARCHAR, score DOUBLE, rank INTEGER)"
+      ]
+    },
+    {
+      "schema": "main",
+      "name": "recommend_for",
+      "kind": "function",
+      "authentication": "none",
+      "access": "read",
+      "signatures": [
+        "recommend_for(data TABLE, user VARCHAR, n BIGINT, value VARCHAR, target_user VARCHAR, item VARCHAR, factors BIGINT) -> TABLE(item VARCHAR, score DOUBLE, rank INTEGER)"
+      ]
+    },
+    {
+      "schema": "main",
+      "name": "similar_items",
+      "kind": "function",
+      "authentication": "none",
+      "access": "read",
+      "signatures": [
+        "similar_items(data TABLE, value VARCHAR, user VARCHAR, n BIGINT, item VARCHAR, factors BIGINT) -> TABLE(item VARCHAR, similar_item VARCHAR, similarity DOUBLE, rank INTEGER)"
+      ]
+    },
+    {
+      "schema": "main",
+      "name": "sample_interactions",
+      "kind": "table",
+      "authentication": "none",
+      "access": "read",
+      "signatures": [
+        "VIEW(user VARCHAR, item VARCHAR, value DECIMAL(2,1))"
+      ]
+    }
+  ],
+  "launch": "uvx --python 3.13 --from git+https://github.com/Query-farm/vgi-recommender@d910f9d42221ab0ac3de8b0743988594764a88bd vgi-recommender",
+  "runtime": "Haybarn2.0.0rc11",
+  "review_notes": "Three named relation-input functions plus one SQL view = four logical public surfaces; no tables or omitted auth/write objects. View value is actual DECIMAL(2,1), despite documentation calling it DOUBLE. Full column signature retained."
+}

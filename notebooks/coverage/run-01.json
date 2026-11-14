@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "notebook_sha256": "e08f4003a7a109da2689a7cb138c0c01aa4f39ad3c67dfd9c8ddb16dc5e75420",
+  "catalog_sha256": "ebff8e46aa84867b94e90948de8654f17c537631d90b9d2e9f606b618a4a653e",
+  "worker_revision": "v0.4.0",
+  "status": "success",
+  "executed_at": "2026-11-14T21:56:14.427924+00:00",
+  "engine": "Haybarn2.0.0rc11 / published VGI extension",
+  "command": "uv run --locked python artifacts/execute_with_receipts.py; invokes python -m vgi_notebooks.execute 01_audit_recommendation_slates.ipynb",
+  "catalog_aliases": [
+    "recommender"
+  ],
+  "cells": [
+    {
+      "id": "parameters",
+      "status": "success",
+      "execution_count": 1,
+      "source_sha256": "1e52fe8352b27f24970924348d6ad9706afc9b75b58e42a761b0fe49d6d2e484",
+      "outputs_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "bootstrap",
+      "status": "success",
+      "execution_count": 2,
+      "source_sha256": "8de91e941e6e6853d6609bd9bed6295dea3584e3ddb709e0fd80ecdfb3f5ce8c",
+      "outputs_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "setup",
+      "status": "success",
+      "execution_count": 3,
+      "source_sha256": "b2a5363245f98da32429b6f3df4da23737c63789e3dc4d7bc9433a11f1866f62",
+      "outputs_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "connection",
+      "status": "success",
+      "execution_count": 4,
+      "source_sha256": "cfb1fc06a55945a2ad51bdb33cae28cb89124df6b631a9cd8af7cdb2e50ec049",
+      "outputs_sha256": "fdb4166dc3676d819413bf960c5f84ffdcb993bd40da932946d3156a193403ba"
+    },
+    {
+      "id": "sample-query",
+      "status": "success",
+      "execution_count": 5,
+      "source_sha256": "70c762207b0dfc3fab400967d7da90701190a407b9fc885a018436bf92b4596d",
+      "outputs_sha256": "bebe8f47d766a2465a7c0a96ac2412e458e5fec7994651b839c3fb4ff991796b"
+    },
+    {
+      "id": "sample-accounting",
+      "status": "success",
+      "execution_count": 6,
+      "source_sha256": "cf80d04896688a786cd861d4a8962ad3a31d3d58bc5f611df3b0e440f6d78ea1",
+      "outputs_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "sample-finding",
+      "status": "success",
+      "execution_count": 7,
+      "source_sha256": "da077dbf02768db5d47c3d0d283e70280ef35a888d327fa6ea48e2a09f04cd0b",
+      "outputs_sha256": "da609ad1cb7072a892eebf0f7641909d525cf4948e30776f8a6f8d36f111a9eb"
+    },
+    {
+      "id": "input-query",
+      "status": "success",
+      "execution_count": 8,
+      "source_sha256": "43fd0ab5eb952d1b321d3cd4d365485c22c44ef8b456b957a87400c3a8050859",
+      "outputs_sha256": "9d7778bf18e4551de6b649c487d38b393db7fa1a0171515cd0dc3c9beeeb8506"
+    },
+    {
+      "id": "model-query",
+      "status": "success",
+      "execution_count": 9,
+      "source_sha256": "4528f67e6b174d6373a3084094480f62c75acdeed6244ece39d07b5ff6e16763",
+      "outputs_sha256": "4c7cb5e842385d55cb12f0c0d57419ddd7d129865f82e7c92c5c2e6874ff1b73"
+    },
+    {
+      "id": "availability-query",
+      "status": "success",
+      "execution_count": 10,
+      "source_sha256": "e0635c20734bcbff135cf6092e34b1ea092f75914e6200bd26cf66b08861aa13",
+      "outputs_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "availability-finding",
+      "status": "success",
+      "execution_count": 11,
+      "source_sha256": "d6c969243c8c31941b5325c54e599f00a1a5b285734724fb48a877f35495454c",
+      "outputs_sha256": "8f656835737623531d5dbcbae3e6f49f71dd049112d4a37969e17c40aa40c93d"
+    },
+    {
+      "id": "matrix-query",
+      "status": "success",
+      "execution_count": 12,
+      "source_sha256": "7e6e4594fe0890201d2c98a13d110563c23a65d63183c2cc3045128f4d93f69c",
+      "outputs_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "matrix-chart",
+      "status": "success",
+      "execution_count": 13,
+      "source_sha256": "0d7b5cb32c7d92770dc56b7a0b43d2e99b19605cae391d2612ab72e0d7cffcf4",
+      "outputs_sha256": "25e4a97f70dc6c238f488c742210861feca6c19969648b3278b041ee507b7318"
+    },
+    {
+      "id": "neighbors-query",
+      "status": "success",
+      "execution_count": 14,
+      "source_sha256": "e9020d29ea791095e25f500decfa2e5e40e830f9db6ca08171ed6a23b7593ac8",
+      "outputs_sha256": "f03cfe7aac280179327ff095c5e3086255dc0f1add6fab5a3dcdb048c5dddafe"
+    },
+    {
+      "id": "neighbors-frame",
+      "status": "success",
+      "execution_count": 15,
+      "source_sha256": "fecb6f39113981fdbfa9e1cc51fa2cfd54f02aa2777574792963034a64ff417d",
+      "outputs_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "neighbors-finding",
+      "status": "success",
+      "execution_count": 16,
+      "source_sha256": "613cb8ae08433ca0cd0f64a5f56c6c3e71146b0b002f7331f74adee6b7bad220",
+      "outputs_sha256": "6dd051fc2feaf18d3d7fb71024caa005f94e76660b348e87cc758c1e53dd6062"
+    },
+    {
+      "id": "exposure-query",
+      "status": "success",
+      "execution_count": 17,
+      "source_sha256": "576a6a9a5aa03470d982ccd308a12963bb8d4f746b4a0b90038692003641721c",
+      "outputs_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "exposure-chart",
+      "status": "success",
+      "execution_count": 18,
+      "source_sha256": "8344c428c72f78d22f3e190db189ef0ff6a90bd26ff403d1e9ff8e50fa69d6c6",
+      "outputs_sha256": "43d8eaf53153c8ae5215afc54fa1a076d0b7c77a360f642dc8d65d67f4dbb85d"
+    },
+    {
+      "id": "checks-query",
+      "status": "success",
+      "execution_count": 19,
+      "source_sha256": "ee89dad9a991c074eeab5f44008243e07e0177791eea84a27a835e88ee3927ee",
+      "outputs_sha256": "3994b7ec9dc6a6bfa1be809da858358399a8e722816d06ab8cb6ae093693a969"
+    },
+    {
+      "id": "cleanup",
+      "status": "success",
+      "execution_count": 20,
+      "source_sha256": "f38aabd03754ba8bd281c2e611fbf97c602cd074797a550503c58e0893c4a8a0",
+      "outputs_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  ],
+  "catalog_amendment": "Canonical manifest represents SQL views as table-kind logical relations with VIEW column signatures. Actual catalog export and executed notebook are unchanged."
+}
