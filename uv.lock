@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.13"
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
@@ -27,8 +27,8 @@ name = "anyio"
 version = "4.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "idna" },
-    { name = "typing-extensions", marker = "python_full_version < '3.15'" },
+    { name = "idna", marker = "sys_platform != 'emscripten'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.15' and sys_platform != 'emscripten'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a1/98/7e457a3b014976887a050561955c0b76e1e7e2d6e27b78ecef2ef80518f2/anyio-4.16.0.tar.gz", hash = "sha256:59bb03251907983d1603d27c3087ddb1e93299ea2163adcdba37899a4fb12ffb", size = 310971, upload-time = "2026-11-01T11:20:07.282Z" }
 wheels = [
@@ -134,7 +134,7 @@ name = "cffi"
 version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pycparser", marker = "implementation_name != 'PyPy'" },
+    { name = "pycparser", marker = "implementation_name != 'PyPy' and sys_platform != 'emscripten' and sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9e/ef/008a1939e372c06329a3fce4279c02f328488f3526744906eeec3da7ad5f/cffi-2.1.1.tar.gz", hash = "sha256:dd31f52ea1086513bb9df30f8fcee9b8918323ae067a3d5b78bc826a000712be", size = 530807, upload-time = "2026-08-03T21:21:18.939Z" }
 wheels = [
@@ -265,8 +265,8 @@ name = "httpcore2"
 version = "2.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "h11" },
-    { name = "truststore" },
+    { name = "h11", marker = "sys_platform != 'emscripten'" },
+    { name = "truststore", marker = "sys_platform != 'emscripten'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c0/61/afa9d6b7452f9eca73f73d45324eb0bb52f098fd5e6049bf6b8263be9b4e/httpcore2-2.16.0.tar.gz", hash = "sha256:c72cd0413563b17e1cd8354677dff887466f8ec2551679759e93126534428643", size = 69886, upload-time = "2026-10-21T07:09:45.31Z" }
 wheels = [
@@ -845,7 +845,7 @@ name = "pynacl"
 version = "1.6.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi", marker = "platform_python_implementation != 'PyPy'" },
+    { name = "cffi", marker = "platform_python_implementation != 'PyPy' and sys_platform != 'emscripten' and sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d9/9a/4019b524b03a13438637b11538c82781a5eda427394380381af8f04f467a/pynacl-1.6.2.tar.gz", hash = "sha256:018494d6d696ae03c7e656e5e74cdfd8ea1326962cc401bcf018f1ed8436811c", size = 3511692, upload-time = "2026-01-01T17:48:10.851Z" }
 wheels = [
@@ -1084,7 +1084,7 @@ wheels = [
 
 [[package]]
 name = "vgi-python"
-version = "0.51.0"
+version = "0.52.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -1095,9 +1095,9 @@ dependencies = [
     { name = "typer" },
     { name = "vgi-rpc" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/69/f2/6ba118554815d7c6c3c656620f60a54f63757a8c6dc1fd36e5f08e75bd5f/vgi_python-0.51.0.tar.gz", hash = "sha256:b876ac5340da8bc1964b8e2ea73224c26ab358e95c2dbee626bfd43addd433fe", size = 5594667, upload-time = "2026-11-12T02:01:17.714Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/84/ada0b5d42a38ae0acbca34ca93deb82dd2800ac8610a97df9ef376035178/vgi_python-0.52.0.tar.gz", hash = "sha256:6ca3fd4a24b3b4264c25201d3a9249206a274d1820e064a5bee0b3d6e561779f", size = 5601825, upload-time = "2026-11-16T05:12:17.805Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/76/e6/4ddb80f3bdc8ba837c80caaf684727d303f1510235c04c54ba8a5d235743/vgi_python-0.51.0-py3-none-any.whl", hash = "sha256:fd1eca97152de1200463d4b4318d2c1fa7e1b8f7116ff4007e4b8ec2a549b0f5", size = 1455026, upload-time = "2026-11-12T02:01:15.393Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/ff/ecea833d823c88ea1f4f458cf545ee5edc294aeb80b4e9776cb8a329c447/vgi_python-0.52.0-py3-none-any.whl", hash = "sha256:5bc11810be2da163534206a7a5bb6b1e7cb0af0195a4e6b29e5c0661ef49950e", size = 1456714, upload-time = "2026-11-16T05:12:15.548Z" },
 ]
 
 [package.optional-dependencies]
@@ -1145,9 +1145,9 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "scipy" },
-    { name = "vgi-python", specifier = ">=0.51.0" },
-    { name = "vgi-python", extras = ["http"], marker = "extra == 'http'", specifier = ">=0.51.0" },
-    { name = "vgi-python", extras = ["http"], marker = "extra == 'serve'", specifier = ">=0.51.0" },
+    { name = "vgi-python", specifier = ">=0.52.0" },
+    { name = "vgi-python", extras = ["http"], marker = "extra == 'http'", specifier = ">=0.52.0" },
+    { name = "vgi-python", extras = ["http"], marker = "extra == 'serve'", specifier = ">=0.52.0" },
 ]
 provides-extras = ["http", "serve", "dev"]
 
