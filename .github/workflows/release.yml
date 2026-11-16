@@ -43,7 +43,7 @@ jobs:
     permissions:
       contents: write # attach assets to the Release
     env:
-      UV_PYTHON: "3.13"
+      UV_PYTHON: "3.14"
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
