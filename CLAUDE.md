@@ -141,5 +141,5 @@ uv run --no-sync ruff check . && uv run --no-sync mypy vgi_recommender/
 `make test-sql` sets `VGI_RECOMMENDER_WORKER="uv run --python 3.14
 recommender_worker.py"`, puts `~/.local/bin` on PATH, and runs `haybarn-unittest
 --test-dir . "test/sql/*"`. Install the runner once with
-`uv tool install --prerelease allow 'haybarn-unittest>=2.0.0rc11,<2.1'`.
+`uv tool install --prerelease allow 'haybarn-unittest>=2.0.1rc3,<2.1'`.
 ```
