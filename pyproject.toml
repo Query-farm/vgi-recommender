@@ -1,6 +1,6 @@
 [project]
 name = "vgi-recommender"
-version = "0.4.1"
+version = "0.5.0"
 description = "Collaborative-filtering recommendations (implicit-feedback ALS) for DuckDB via VGI"
 readme = "README.md"
 keywords = [
@@ -30,7 +30,7 @@ classifiers = [
 ]
 requires-python = ">=3.14"
 dependencies = [
-    "vgi-python>=0.52.2,<0.53",
+    "vgi-python>=0.55.1,<0.56",
     "implicit>=0.7",
     "scipy",
     "numpy",
@@ -43,13 +43,13 @@ dependencies = [
 # in addition to stdio. That path needs vgi-python's `http` extra (waitress).
 # CI's http transport leg installs this via `uv sync --extra http`.
 http = [
-    "vgi-python[http]>=0.52.2,<0.53",
+    "vgi-python[http]>=0.55.1,<0.56",
 ]
 # HTTP-serving extra — installed by the Docker image (`pip install '.[serve]'`).
 # Alias of `http` (waitress via vgi-python[http]) under the conventional name
 # the container Dockerfile / docker-publish smoke expect.
 serve = [
-    "vgi-python[http]>=0.52.2,<0.53",
+    "vgi-python[http,oauth]>=0.55.1,<0.56",
 ]
 dev = [
     "pytest>=8",
